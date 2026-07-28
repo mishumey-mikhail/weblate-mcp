@@ -7,7 +7,7 @@ This guide shows you how to configure and use the Weblate MCP (Model Context Pro
 ### Installation & Configuration
 
 1. **Add to Claude Desktop configuration**
-   
+
    Edit your Claude Desktop configuration file:
    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -103,7 +103,7 @@ This guide shows you how to configure and use the Weblate MCP (Model Context Pro
 Once configured, you'll have access to these translation management tools:
 
 - **listProjects** - List all available Weblate projects
-- **listComponents** - List components in a specific project  
+- **listComponents** - List components in a specific project
 - **listLanguages** - List languages available in a project
 - **searchUnitsWithFilters** ⭐ - **Efficient search using Weblate's native filtering syntax**
 - **searchStringInProject** - Search for translations containing specific text
@@ -111,6 +111,21 @@ Once configured, you'll have access to these translation management tools:
 - **writeTranslation** - Write or update a translation value
 - **bulkWriteTranslations** ⚡ - **Batch update multiple translations efficiently**
 - **findTranslationsForKey** - Find all translations for a specific key
+- **lookupTranslationMemory** - Find read-only translation memory matches for source strings
+- **listTranslationMemory** - List filtered read-only Translation Memory entries
+- **getTranslationMemoryEntry** - Get one Translation Memory entry with provenance
+
+### Translation Case Context (read-only)
+- **getUnitDetails** - Get complete details for one translation unit
+- **getUnitComments** - Get comments attached to a translation unit
+- **getUnitHistory** - Get history for a translation unit
+- **getChangeDetails** - Get details for one translation change
+- **getTranslationDetails** - Get translation metadata and statistics
+- **getProjectDetails** - Get project metadata and configuration
+- **getComponentDetails** - Get component metadata and glossary settings
+- **getUnitScreenshots** - Get screenshots associated with a translation unit
+- **listTranslationUnits** - List units for an exact project/component/language scope
+- **getRepositoryStatus** - Get repository synchronization status
 
 ## Usage Examples
 
@@ -211,4 +226,4 @@ If you encounter issues:
 1. Check this documentation first
 2. Verify your Weblate API setup
 3. Test the package manually with `npx @mmntm/weblate-mcp`
-4. Report issues on the [GitHub repository](https://github.com/mmntm/weblate-mcp) 
+4. Report issues on the [GitHub repository](https://github.com/mmntm/weblate-mcp)

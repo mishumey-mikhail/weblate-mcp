@@ -5,6 +5,8 @@ import {
   WeblateLanguagesService,
   WeblateTranslationsService,
   WeblateChangesService,
+  WeblateMemoryService,
+  WeblateReadonlyService,
 } from './weblate';
 import {
   type Project,
@@ -13,7 +15,16 @@ import {
   type Unit,
   type Change,
 } from '../client';
-import { SearchIn } from '../types';
+import {
+  type SearchIn,
+  type TranslationMemoryLookupResult,
+  type WeblateChangeDetails,
+  type WeblateComment,
+  type WeblatePaginatedResponse,
+  type WeblateRepositoryStatus,
+  type WeblateScreenshot,
+  type WeblateTranslationMemoryEntry,
+} from '../types';
 
 @Injectable()
 export class WeblateApiService {
@@ -23,6 +34,8 @@ export class WeblateApiService {
     private readonly languagesService: WeblateLanguagesService,
     private readonly translationsService: WeblateTranslationsService,
     private readonly changesService: WeblateChangesService,
+    private readonly memoryService: WeblateMemoryService,
+    private readonly readonlyService: WeblateReadonlyService,
   ) {}
 
   // Project methods
@@ -52,7 +65,12 @@ export class WeblateApiService {
     query?: string,
     source?: string,
     target?: string,
-  ): Promise<{ results: Unit[]; count: number; next?: string; previous?: string }> {
+  ): Promise<{
+    results: Unit[];
+    count: number;
+    next?: string;
+    previous?: string;
+  }> {
     return this.translationsService.searchTranslations(
       projectSlug,
       componentSlug,
@@ -175,8 +193,18 @@ export class WeblateApiService {
     user?: string,
     timestampAfter?: string,
     timestampBefore?: string,
-  ): Promise<{ results: Change[]; count: number; next?: string; previous?: string }> {
-    return this.changesService.listRecentChanges(limit, user, timestampAfter, timestampBefore);
+  ): Promise<{
+    results: Change[];
+    count: number;
+    next?: string;
+    previous?: string;
+  }> {
+    return this.changesService.listRecentChanges(
+      limit,
+      user,
+      timestampAfter,
+      timestampBefore,
+    );
   }
 
   async getProjectChanges(projectSlug: string) {
@@ -208,6 +236,144 @@ export class WeblateApiService {
       languageCode,
       searchQuery,
       limit,
+    );
+  }
+
+  // Translation Memory methods
+  async lookupTranslationMemory(
+    sourceLanguage: string,
+    targetLanguage: string,
+    strings: string[],
+    projectSlug?: string,
+    exact: boolean = false,
+  ): Promise<TranslationMemoryLookupResult[]> {
+    return this.memoryService.lookupTranslationMemory(
+      sourceLanguage,
+      targetLanguage,
+      strings,
+      projectSlug,
+      exact,
+    );
+  }
+
+  async getUnitDetails(unitId: string): Promise<Unit> {
+    return this.readonlyService.getUnitDetails(unitId);
+  }
+
+  async getUnitComments(
+    unitId: string,
+    page = 1,
+    pageSize = 100,
+  ): Promise<WeblatePaginatedResponse<WeblateComment>> {
+    return this.readonlyService.getUnitComments(unitId, page, pageSize);
+  }
+
+  async getUnitHistory(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    unitId: string,
+    limit = 100,
+  ): Promise<WeblateChangeDetails[]> {
+    return this.readonlyService.getUnitHistory(
+      projectSlug,
+      componentSlug,
+      languageCode,
+      unitId,
+      limit,
+    );
+  }
+
+  async getChangeDetails(changeId: string): Promise<WeblateChangeDetails> {
+    return this.readonlyService.getChangeDetails(changeId);
+  }
+
+  async getTranslationDetails(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+  ): Promise<Record<string, unknown>> {
+    return this.readonlyService.getTranslationDetails(
+      projectSlug,
+      componentSlug,
+      languageCode,
+    );
+  }
+
+  async getProjectDetails(projectSlug: string): Promise<Project> {
+    return this.readonlyService.getProjectDetails(projectSlug);
+  }
+
+  async getComponentDetails(
+    projectSlug: string,
+    componentSlug: string,
+  ): Promise<Component> {
+    return this.readonlyService.getComponentDetails(projectSlug, componentSlug);
+  }
+
+  async listTranslationMemory(
+    projectSlug?: string,
+    source?: string,
+    sourceLanguage?: string,
+    targetLanguage?: string,
+    page = 1,
+    pageSize = 100,
+  ): Promise<WeblatePaginatedResponse<WeblateTranslationMemoryEntry>> {
+    return this.memoryService.listTranslationMemory(
+      projectSlug,
+      source,
+      sourceLanguage,
+      targetLanguage,
+      page,
+      pageSize,
+    );
+  }
+
+  async getTranslationMemoryEntry(
+    memoryId: string,
+  ): Promise<WeblateTranslationMemoryEntry> {
+    return this.memoryService.getTranslationMemoryEntry(memoryId);
+  }
+
+  async getUnitScreenshots(
+    projectSlug: string,
+    componentSlug: string,
+    unitId: string,
+  ): Promise<WeblateScreenshot[]> {
+    return this.readonlyService.getUnitScreenshots(
+      projectSlug,
+      componentSlug,
+      unitId,
+    );
+  }
+
+  async listTranslationUnits(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    page = 1,
+    pageSize = 100,
+  ): Promise<WeblatePaginatedResponse<Unit>> {
+    return this.readonlyService.listTranslationUnits(
+      projectSlug,
+      componentSlug,
+      languageCode,
+      page,
+      pageSize,
+    );
+  }
+
+  async getRepositoryStatus(
+    scope: 'project' | 'component' | 'translation',
+    projectSlug: string,
+    componentSlug?: string,
+    languageCode?: string,
+  ): Promise<WeblateRepositoryStatus> {
+    return this.readonlyService.getRepositoryStatus(
+      scope,
+      projectSlug,
+      componentSlug,
+      languageCode,
     );
   }
 }

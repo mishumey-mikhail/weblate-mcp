@@ -4,4 +4,6 @@ export * from './languages.tool';
 export * from './translations.tool';
 export * from './changes.tool';
 export * from './statistics.tool';
-export * from './debug.tool'; 
+export * from './memory.tool';
+export * from './readonly.tool';
+export * from './debug.tool';

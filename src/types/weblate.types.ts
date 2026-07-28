@@ -135,4 +135,90 @@ export interface WeblateSearchResult {
   results: WeblateTranslation[];
 }
 
-export type SearchIn = 'source' | 'target' | 'both'; 
+export interface TranslationMemoryLookupRequest {
+  strings: string[];
+}
+
+export interface TranslationMemoryMatch {
+  id: number;
+  source: string;
+  target: string;
+  origin: string;
+  exact: boolean;
+  quality: number;
+}
+
+export interface TranslationMemoryLookupResult {
+  query: string;
+  match: TranslationMemoryMatch | null;
+}
+
+export interface WeblatePaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface WeblateComment {
+  id: number;
+  comment: string;
+  scope: string;
+  user: string;
+  timestamp?: string;
+}
+
+export interface WeblateChangeDetails {
+  id: number;
+  unit: string;
+  component: string;
+  translation: string;
+  user: string;
+  author: string;
+  timestamp: string;
+  action?: number;
+  action_name: string;
+  target?: string;
+  old?: string;
+  details?: unknown;
+  url: string;
+}
+
+export interface WeblateTranslationMemoryEntry {
+  id: number;
+  source: string;
+  target: string;
+  source_language: number | string;
+  target_language: number | string;
+  origin: string;
+  project: number | string | null;
+  from_file: boolean;
+  shared: boolean;
+}
+
+export interface WeblateScreenshot {
+  id: number;
+  name: string;
+  repository_filename?: string;
+  translation: string;
+  file_url: string;
+  units: string[];
+  url: string;
+  image_url?: string;
+}
+
+export interface WeblateRepositoryStatus {
+  needs_commit: boolean;
+  needs_merge: boolean;
+  needs_push: boolean;
+  url: string;
+  remote_commit?: unknown;
+  weblate_commit?: unknown;
+  status?: string | null;
+  merge_failure?: string | null;
+  pending_units?: unknown;
+  outgoing_commits?: number | null;
+  missing_commits?: number | null;
+}
+
+export type SearchIn = 'source' | 'target' | 'both';

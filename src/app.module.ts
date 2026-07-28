@@ -9,15 +9,19 @@ import {
   WeblateTranslationsService,
   WeblateChangesService,
   WeblateStatisticsService,
+  WeblateMemoryService,
+  WeblateReadonlyService,
 } from './services';
 import { WeblateClientService } from './services/weblate-client.service';
-import { 
+import {
   WeblateProjectsTool,
   WeblateComponentsTool,
   WeblateLanguagesTool,
   WeblateTranslationsTool,
   WeblateChangesTool,
   WeblateStatisticsTool,
+  WeblateMemoryTool,
+  WeblateReadonlyTool,
 } from './tools';
 import { randomUUID } from 'crypto';
 
@@ -46,6 +50,23 @@ Translation Management:
 - listTranslationKeys: List all translation keys in a project
 - searchTranslationKeys: Search for translation keys by pattern
 
+Translation Memory:
+- lookupTranslationMemory: Look up read-only translation memory matches for source strings
+- listTranslationMemory: List filtered read-only Translation Memory entries
+- getTranslationMemoryEntry: Get one read-only Translation Memory entry
+
+Translation Case Context (read-only):
+- getUnitDetails: Get complete details for one translation unit
+- getUnitComments: Get comments attached to a translation unit
+- getUnitHistory: Get history for a translation unit
+- getChangeDetails: Get details for one translation change
+- getTranslationDetails: Get translation metadata and statistics
+- getProjectDetails: Get project metadata and configuration
+- getComponentDetails: Get component metadata and configuration
+- getUnitScreenshots: Get screenshots associated with a translation unit
+- listTranslationUnits: List units for an exact project/component/language scope
+- getRepositoryStatus: Get repository synchronization status
+
 Change Tracking & History:
 - listRecentChanges: List recent changes across all projects
 - getProjectChanges: Get recent changes for a specific project
@@ -71,12 +92,16 @@ Translation Statistics Dashboard:
     WeblateChangesService,
     WeblateApiService,
     WeblateStatisticsService,
+    WeblateMemoryService,
+    WeblateReadonlyService,
     WeblateProjectsTool,
     WeblateComponentsTool,
     WeblateLanguagesTool,
     WeblateTranslationsTool,
     WeblateChangesTool,
     WeblateStatisticsTool,
+    WeblateMemoryTool,
+    WeblateReadonlyTool,
   ],
 })
 export class AppModule {}

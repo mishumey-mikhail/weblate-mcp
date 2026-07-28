@@ -7,6 +7,8 @@ This document provides a comprehensive reference for all MCP tools available in 
 - [Project Management](#project-management)
 - [Component Management](#component-management)
 - [Translation Management](#translation-management)
+- [Translation Memory](#translation-memory)
+- [Translation Case Context](#translation-case-context)
 - [Language Management](#language-management)
 - [Translation Statistics Dashboard](#translation-statistics-dashboard)
 - [Change Tracking & History](#change-tracking--history)
@@ -189,7 +191,7 @@ Search translation units using Weblate's powerful filtering syntax. This is the 
 
 **Parameters:**
 - `projectSlug` (string, required): The slug of the project
-- `componentSlug` (string, required): The slug of the component  
+- `componentSlug` (string, required): The slug of the component
 - `languageCode` (string, required): The language code (e.g., "sk", "cs", "fr")
 - `searchQuery` (string, required): Weblate search query using their filter syntax
 - `limit` (number, optional): Maximum number of results to return (default: 50, max: 200)
@@ -218,7 +220,7 @@ Search translation units using Weblate's powerful filtering syntax. This is the 
   "name": "searchUnitsWithFilters",
   "arguments": {
     "projectSlug": "myproject",
-    "componentSlug": "frontend", 
+    "componentSlug": "frontend",
     "languageCode": "fr",
     "searchQuery": "state:=0",
     "limit": 20
@@ -247,7 +249,7 @@ Search for translations containing specific text across a project.
 **Example:**
 ```json
 {
-  "name": "searchStringInProject", 
+  "name": "searchStringInProject",
   "arguments": {
     "projectSlug": "myproject",
     "value": "login",
@@ -255,6 +257,70 @@ Search for translations containing specific text across a project.
   }
 }
 ```
+
+## Translation Memory
+
+### `lookupTranslationMemory`
+
+Find read-only translation memory matches for one or more source strings.
+
+**Parameters:**
+- `sourceLanguage` (string, required): Source language code
+- `targetLanguage` (string, required): Target language code
+- `strings` (string[], required): Source strings to search, from 1 to 100 strings; each string can contain up to 2000 characters
+- `projectSlug` (string, optional): Limit the search to a Weblate project
+- `exact` (boolean, optional): Return only exact matches; defaults to `false`
+
+**Returns:** A result for every requested string. A result can contain a single best match or `null` when no memory entry was found.
+
+**Example:**
+```json
+{
+  "name": "lookupTranslationMemory",
+  "arguments": {
+    "sourceLanguage": "en",
+    "targetLanguage": "ru",
+    "projectSlug": "ai-proofreader",
+    "strings": ["Offers", "Log in"],
+    "exact": false
+  }
+}
+```
+
+### `listTranslationMemory`
+
+List filtered Translation Memory entries. At least one filter is required to avoid dumping the entire memory database.
+
+**Parameters:** `projectSlug`, `source`, `sourceLanguage`, `targetLanguage` (at least one required), plus optional `page` and `pageSize`.
+
+### `getTranslationMemoryEntry`
+
+Get one Translation Memory entry by ID, including origin, project, language and file provenance.
+
+**Parameters:** `memoryId` (string, required).
+
+## Translation Case Context
+
+All tools in this section are read-only.
+
+### Unit context
+
+- `getUnitDetails` — complete unit data by `unitId`.
+- `getUnitComments` — comments by `unitId`, with `page` and `pageSize`.
+- `getUnitHistory` — changes for a unit within `projectSlug`, `componentSlug`, and `languageCode`.
+- `getUnitScreenshots` — screenshots associated with a unit, including image URLs.
+- `listTranslationUnits` — paginated units for an exact project/component/language scope.
+
+### Project and translation context
+
+- `getProjectDetails` — project configuration and metadata.
+- `getComponentDetails` — component configuration, glossary flag and screenshot settings.
+- `getTranslationDetails` — translation metadata, statistics, comments and suggestion counters.
+
+### Change and repository context
+
+- `getChangeDetails` — full change record, including old value, new value, author and timestamp.
+- `getRepositoryStatus` — project, component or translation repository synchronization status.
 
 ### `getTranslationForKey`
 
@@ -275,7 +341,7 @@ Get translation value for a specific key in a project.
   "arguments": {
     "projectSlug": "myproject",
     "componentSlug": "frontend",
-    "languageCode": "fr", 
+    "languageCode": "fr",
     "key": "welcome.message"
   }
 }
@@ -888,4 +954,4 @@ Get recent changes by a specific user.
 4. **Validate input**: Provide valid parameters to avoid errors
 5. **Monitor rate limits**: Be mindful of API rate limiting
 6. **Statistics caching**: Statistics may be cached and updated periodically
-7. **Dashboard performance**: Use `getProjectDashboard` for comprehensive overviews instead of multiple individual calls 
+7. **Dashboard performance**: Use `getProjectDashboard` for comprehensive overviews instead of multiple individual calls

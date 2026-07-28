@@ -151,6 +151,27 @@ For development or local builds:
 | **`bulkWriteTranslations`** ⚡ | **Batch update multiple translations efficiently with error handling** |
 | **`findTranslationsForKey`** | Find all translations for a specific key across languages |
 
+### 🧠 Translation Memory
+| Tool | Description |
+|------|-------------|
+| **`lookupTranslationMemory`** | Find read-only translation memory matches for source strings |
+| **`listTranslationMemory`** | List filtered read-only Translation Memory entries |
+| **`getTranslationMemoryEntry`** | Get one Translation Memory entry with provenance |
+
+### 🧾 Translation Case Context (Read-only)
+| Tool | Description |
+|------|-------------|
+| **`getUnitDetails`** | Get complete details for one translation unit |
+| **`getUnitComments`** | Get comments attached to a translation unit |
+| **`getUnitHistory`** | Get history for a translation unit |
+| **`getChangeDetails`** | Get details for one translation change |
+| **`getTranslationDetails`** | Get translation metadata and statistics |
+| **`getProjectDetails`** | Get project metadata and configuration |
+| **`getComponentDetails`** | Get component metadata and glossary settings |
+| **`getUnitScreenshots`** | Get screenshots associated with a translation unit |
+| **`listTranslationUnits`** | List units for an exact project/component/language scope |
+| **`getRepositoryStatus`** | Get repository synchronization status |
+
 #### 🚀 Why searchUnitsWithFilters is Recommended
 
 The `searchUnitsWithFilters` tool uses Weblate's native filtering syntax, making it the most efficient way to find translations:
@@ -160,7 +181,7 @@ The `searchUnitsWithFilters` tool uses Weblate's native filtering syntax, making
 
 **Example efficient queries:**
 - `state:=0` - Find untranslated strings
-- `state:=10` - Find strings that need editing  
+- `state:=10` - Find strings that need editing
 - `source:"login"` - Find strings containing "login"
 - `component:common AND state:=0` - Complex filters
 
@@ -358,4 +379,4 @@ MIT License - see [LICENSE](./LICENSE) file for details.
 
 **Built with ❤️ for the translation community**
 
-*Need help? Check our [documentation](./docs/) or create an [issue](https://github.com/mmntm/weblate-mcp/issues)!* 
+*Need help? Check our [documentation](./docs/) or create an [issue](https://github.com/mmntm/weblate-mcp/issues)!*
