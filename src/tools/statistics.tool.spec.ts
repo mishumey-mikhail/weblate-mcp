@@ -10,6 +10,10 @@ type TranslationStatisticsFormatter = (
   languageCode: string,
   stats: Record<string, unknown>,
 ) => string;
+type LanguageStatisticsFormatter = (
+  languageCode: string,
+  stats: Record<string, unknown>,
+) => string;
 
 describe('WeblateStatisticsTool', () => {
   const createTool = (): WeblateStatisticsTool =>
@@ -57,5 +61,27 @@ describe('WeblateStatisticsTool', () => {
 
     expect(result).toContain('- ❌ Untranslated: 60.0%');
     expect(result).toContain('- ❌ Untranslated: 60');
+  });
+
+  it('derives language untranslated values when Weblate omits them', () => {
+    const tool = createTool();
+    const formatLanguageStatistics = (
+      tool as unknown as {
+        formatLanguageStatistics: LanguageStatisticsFormatter;
+      }
+    ).formatLanguageStatistics.bind(tool);
+
+    const result = formatLanguageStatistics('en', {
+      name: 'English',
+      code: 'en',
+      total: 420,
+      translated: 420,
+      translated_percent: 100,
+      approved: 0,
+      approved_percent: 0,
+    });
+
+    expect(result).toContain('- ❌ Untranslated: 0.0%');
+    expect(result).toContain('- ❌ Untranslated: 0');
   });
 });

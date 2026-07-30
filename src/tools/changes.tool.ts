@@ -250,7 +250,7 @@ export class WeblateChangesTool {
     const user = change.user || 'Unknown user';
     const target = change.target || 'N/A';
     
-    return `**${actionDescription}**\n**User:** ${user}\n**Time:** ${timestamp}\n**Target:** ${target}`;
+    return `**${actionDescription}**\n**ID:** ${change.id}\n**User:** ${user}\n**Time:** ${timestamp}\n**Target:** ${target}`;
   }
 
   private getActionDescription(action: number): string {
@@ -306,4 +306,4 @@ export class WeblateChangesTool {
     
     return actionMap[action] || `Unknown action (${action})`;
   }
-} 
+}

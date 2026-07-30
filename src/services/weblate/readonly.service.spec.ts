@@ -51,7 +51,14 @@ describe('WeblateReadonlyService', () => {
         previous: null,
         results: [
           {
-            id: 1,
+            id: 0,
+            unit: null,
+            action_name: 'Repository updated',
+            timestamp: '2025-01-01T00:00:00Z',
+            author: 'system',
+          },
+          {
+            id: 2,
             unit: 'https://weblate.test/api/units/42/',
             action_name: 'Translation changed',
             timestamp: '2025-01-01T00:00:00Z',
@@ -70,7 +77,7 @@ describe('WeblateReadonlyService', () => {
 
     await expect(
       service.getUnitHistory('project', 'component', 'en', '42', 50),
-    ).resolves.toEqual([expect.objectContaining({ id: 1 })]);
+    ).resolves.toEqual([expect.objectContaining({ id: 2 })]);
   });
 
   it('resolves screenshots associated with a unit and their image URL', async () => {

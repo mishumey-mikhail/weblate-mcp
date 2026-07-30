@@ -206,8 +206,14 @@ export class WeblateReadonlyService extends BaseWeblateService {
     return this.referencesUnitUrl(change.unit, unitId);
   }
 
-  private referencesUnitUrl(value: string, unitId: string): boolean {
-    return value === unitId || value.includes(`/units/${unitId}/`);
+  private referencesUnitUrl(
+    value: string | null | undefined,
+    unitId: string,
+  ): boolean {
+    return (
+      value === unitId ||
+      (typeof value === 'string' && value.includes(`/units/${unitId}/`))
+    );
   }
 
   private path(value: string): string {

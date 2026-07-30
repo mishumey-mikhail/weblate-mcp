@@ -479,6 +479,7 @@ ${progressBar} ${formatPercent(stats.translated_percent)}
     const formatPercent = (value: any) => {
       return typeof value === 'number' ? `${value.toFixed(1)}%` : 'N/A';
     };
+    const untranslated = deriveUntranslatedStatistics(stats);
 
     return `## 🌐 Language Statistics: ${stats?.name || languageCode}
 
@@ -490,13 +491,13 @@ ${progressBar} ${formatPercent(stats.translated_percent)}
 **Overall Progress:**
 - 🎯 Translated: ${formatPercent(getStatValue('translated_percent'))}
 - ✅ Approved: ${formatPercent(getStatValue('approved_percent'))}
-- ❌ Untranslated: ${formatPercent(getStatValue('nottranslated_percent'))}
+- ❌ Untranslated: ${formatPercent(untranslated.percent)}
 
 **String Counts:**
 - 📝 Total: ${getStatValue('total')}
 - ✅ Translated: ${getStatValue('translated')}
 - 🎯 Approved: ${getStatValue('approved')}
-- ❌ Untranslated: ${getStatValue('nottranslated')}`;
+- ❌ Untranslated: ${untranslated.count}`;
   }
 
   private formatUserStatistics(username: string, stats: any): string {
