@@ -9,6 +9,7 @@ import {
   languagesStatisticsRetrieve,
   usersStatisticsRetrieve,
 } from '../../client';
+import { type Component } from '../../client';
 
 type NumericStatisticKey =
   | 'total'
@@ -120,6 +121,36 @@ function aggregateComponentStatistics(
   };
 }
 
+function getComponentApiSlug(
+  projectSlug: string,
+  component: Pick<Component, 'slug' | 'statistics_url'>,
+): string {
+  try {
+    const statisticsPath = new URL(
+      component.statistics_url,
+      'http://weblate.local',
+    ).pathname;
+    const prefix = `/components/${encodeURIComponent(projectSlug)}/`;
+    const suffix = '/statistics/';
+    const prefixIndex = statisticsPath.indexOf(prefix);
+
+    if (prefixIndex >= 0 && statisticsPath.endsWith(suffix)) {
+      const encodedSlug = statisticsPath.slice(
+        prefixIndex + prefix.length,
+        -suffix.length,
+      );
+      if (encodedSlug) {
+        // Weblate returns nested component slugs double-encoded in URL fields.
+        return decodeURIComponent(encodedSlug);
+      }
+    }
+  } catch {
+    // Fall back to the public component slug when the URL is malformed.
+  }
+
+  return component.slug;
+}
+
 @Injectable()
 export class WeblateStatisticsService {
   private readonly logger = new Logger(WeblateStatisticsService.name);
@@ -162,22 +193,11 @@ export class WeblateStatisticsService {
    */
   async getComponentStatistics(projectSlug: string, componentSlug: string) {
     try {
-      const response = await componentsStatisticsRetrieve({
-        client: this.clientService.getClient(),
-        path: {
-          project__slug: projectSlug,
-          slug: componentSlug,
-        },
-        query: { format: 'json' },
-      });
-
-      if (response.error) {
-        throw new Error(
-          `Failed to get component statistics: ${getErrorMessage(response.error)}`,
-        );
-      }
-
-      return aggregateComponentStatistics(response.data);
+      const apiComponentSlug = await this.resolveComponentApiSlug(
+        projectSlug,
+        componentSlug,
+      );
+      return await this.fetchComponentStatistics(projectSlug, apiComponentSlug);
     } catch (error) {
       this.logger.error(
         `Failed to get component statistics for ${projectSlug}/${componentSlug}`,
@@ -185,6 +205,43 @@ export class WeblateStatisticsService {
       );
       throw error;
     }
+  }
+
+  private async fetchComponentStatistics(
+    projectSlug: string,
+    componentSlug: string,
+  ) {
+    const response = await componentsStatisticsRetrieve({
+      client: this.clientService.getClient(),
+      path: {
+        project__slug: projectSlug,
+        slug: componentSlug,
+      },
+      query: { format: 'json' },
+    });
+
+    if (response.error) {
+      throw new Error(
+        `Failed to get component statistics: ${getErrorMessage(response.error)}`,
+      );
+    }
+
+    return aggregateComponentStatistics(response.data);
+  }
+
+  private async resolveComponentApiSlug(
+    projectSlug: string,
+    componentSlug: string,
+  ): Promise<string> {
+    if (/%2f/i.test(componentSlug)) {
+      return componentSlug;
+    }
+
+    const components = await this.componentsService.listComponents(projectSlug);
+    const component = components.find(({ slug }) => slug === componentSlug);
+    return component
+      ? getComponentApiSlug(projectSlug, component)
+      : componentSlug;
   }
 
   /**
@@ -288,9 +345,9 @@ export class WeblateStatisticsService {
       const componentStats = await Promise.all(
         components.map(async (component) => {
           try {
-            const stats = await this.getComponentStatistics(
+            const stats = await this.fetchComponentStatistics(
               projectSlug,
-              component.slug,
+              getComponentApiSlug(projectSlug, component),
             );
             return {
               component: component.name,

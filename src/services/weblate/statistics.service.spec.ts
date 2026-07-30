@@ -29,6 +29,7 @@ describe('WeblateStatisticsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    componentsService.listComponents.mockResolvedValue([]);
   });
 
   it('aggregates the paginated language statistics returned for a component', async () => {
@@ -98,6 +99,35 @@ describe('WeblateStatisticsService', () => {
     await expect(result).rejects.not.toThrow('[object Object]');
   });
 
+  it('resolves a nested component slug from Weblate statistics_url', async () => {
+    const service = createService();
+    const retrieve = componentsStatisticsRetrieve as jest.Mock;
+
+    componentsService.listComponents.mockResolvedValue([
+      {
+        slug: 'glavnaya-stranica',
+        statistics_url:
+          'http://weblate.test/api/components/web/publichnye-stranicy%252Fglavnaya-stranica/statistics/',
+      },
+    ]);
+    retrieve.mockResolvedValue({
+      data: {
+        results: [{ total: 1, translated: 1 }],
+      },
+    });
+
+    await service.getComponentStatistics('web', 'glavnaya-stranica');
+
+    expect(retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: {
+          project__slug: 'web',
+          slug: 'publichnye-stranicy%2Fglavnaya-stranica',
+        },
+      }),
+    );
+  });
+
   it('returns aggregated statistics for every component in the dashboard', async () => {
     const service = createService();
     const retrieve = componentsStatisticsRetrieve as jest.Mock;
@@ -108,8 +138,18 @@ describe('WeblateStatisticsService', () => {
       translated: 80,
     } as never);
     componentsService.listComponents.mockResolvedValue([
-      { name: 'Glossary', slug: 'glossarij' },
-      { name: 'Homepage', slug: 'glavnaya-stranica' },
+      {
+        name: 'Glossary',
+        slug: 'glossarij',
+        statistics_url:
+          'http://weblate.test/api/components/web/glossarij/statistics/',
+      },
+      {
+        name: 'Homepage',
+        slug: 'glavnaya-stranica',
+        statistics_url:
+          'http://weblate.test/api/components/web/publichnye-stranicy%252Fglavnaya-stranica/statistics/',
+      },
     ]);
     retrieve
       .mockResolvedValueOnce({
