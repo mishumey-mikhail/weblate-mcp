@@ -9,6 +9,12 @@ describe('WeblateReadonlyService', () => {
         WEBLATE_API_URL: 'http://weblate.test',
         WEBLATE_API_TOKEN: 'test-token',
       }),
+      {
+        resolveComponentApiSlug: jest.fn(
+          (_projectSlug: string, componentSlug: string) =>
+            Promise.resolve(componentSlug),
+        ),
+      } as never,
     );
 
   it('reads unit comments with pagination', async () => {
@@ -148,6 +154,31 @@ describe('WeblateReadonlyService', () => {
     );
     expect(get).toHaveBeenCalledWith(
       '/translations/project/component/en/repository/',
+      { params: undefined },
+    );
+  });
+
+  it('uses the encoded API slug for nested component details', async () => {
+    const resolveComponentApiSlug = jest.fn().mockResolvedValue(
+      'publichnye-stranicy%2Fglavnaya-stranica',
+    );
+    const service = new WeblateReadonlyService(
+      new ConfigService({
+        WEBLATE_API_URL: 'http://weblate.test',
+        WEBLATE_API_TOKEN: 'test-token',
+      }),
+      { resolveComponentApiSlug } as never,
+    );
+    const apiClient = (service as unknown as { apiClient: AxiosInstance })
+      .apiClient;
+    const get = jest.spyOn(apiClient, 'get').mockResolvedValue({
+      data: { slug: 'glavnaya-stranica' },
+    });
+
+    await service.getComponentDetails('web', 'glavnaya-stranica');
+
+    expect(get).toHaveBeenCalledWith(
+      '/components/web/publichnye-stranicy%252Fglavnaya-stranica/',
       { params: undefined },
     );
   });

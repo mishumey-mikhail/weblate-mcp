@@ -15,6 +15,10 @@ describe('WeblateStatisticsService', () => {
   };
   const componentsService = {
     listComponents: jest.fn(),
+    resolveComponentApiSlug: jest.fn(
+      (_projectSlug: string, componentSlug: string) =>
+        Promise.resolve(componentSlug),
+    ),
   };
   const languagesService = {
     listLanguages: jest.fn(),
@@ -30,6 +34,10 @@ describe('WeblateStatisticsService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     componentsService.listComponents.mockResolvedValue([]);
+    componentsService.resolveComponentApiSlug.mockImplementation(
+      (_projectSlug: string, componentSlug: string) =>
+        Promise.resolve(componentSlug),
+    );
   });
 
   it('aggregates the paginated language statistics returned for a component', async () => {
@@ -115,6 +123,9 @@ describe('WeblateStatisticsService', () => {
         results: [{ total: 1, translated: 1 }],
       },
     });
+    componentsService.resolveComponentApiSlug.mockResolvedValue(
+      'publichnye-stranicy%2Fglavnaya-stranica',
+    );
 
     await service.getComponentStatistics('web', 'glavnaya-stranica');
 

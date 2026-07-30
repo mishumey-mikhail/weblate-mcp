@@ -333,7 +333,7 @@ export class WeblateStatisticsTool {
 - 🔍 Read-only: ${getStatValue('readonly')}
 
 **Project Details:**
-- 🌐 URL: ${stats?.web_url || 'N/A'}
+- 🌐 URL: ${stats?.web_url || stats?.url || 'N/A'}
 - 🔗 Repository: ${stats?.repository_url || 'N/A'}`;
   }
 
@@ -485,7 +485,7 @@ ${progressBar} ${formatPercent(stats.translated_percent)}
 
 **Language Details:**
 - 📛 Name: ${getStatValue('name')}
-- 🔤 Code: ${getStatValue('code')}
+- 🔤 Code: ${stats?.code || languageCode}
 - 📍 Direction: ${getStatValue('direction', 'ltr')}
 
 **Overall Progress:**

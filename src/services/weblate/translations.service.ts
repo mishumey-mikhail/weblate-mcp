@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { WeblateClientService } from '../weblate-client.service';
+import { WeblateComponentsService } from './components.service';
 import { unitsList, unitsPartialUpdate, translationsUnitsRetrieve, type Unit, type PaginatedUnitList, type UnitsListData, type TranslationsUnitsRetrieveData } from '../../client';
 import { SearchIn } from '../../types';
 
@@ -7,7 +8,10 @@ import { SearchIn } from '../../types';
 export class WeblateTranslationsService {
   private readonly logger = new Logger(WeblateTranslationsService.name);
 
-  constructor(private weblateClientService: WeblateClientService) {}
+  constructor(
+    private weblateClientService: WeblateClientService,
+    private componentsService: WeblateComponentsService,
+  ) {}
 
   async searchTranslations(
     projectSlug: string,
@@ -37,7 +41,12 @@ export class WeblateTranslationsService {
       
       // Add component filter if specified
       if (componentSlug) {
-        q_parts.push(`component:${componentSlug}`);
+        const apiComponentSlug =
+          await this.componentsService.resolveComponentApiSlug(
+            projectSlug,
+            componentSlug,
+          );
+        q_parts.push(`component:${decodeURIComponent(apiComponentSlug)}`);
       }
       
       // Add language filter if specified
@@ -376,11 +385,16 @@ export class WeblateTranslationsService {
   ): Promise<Unit[]> {
     try {
       const client = this.weblateClientService.getClient();
+      const apiComponentSlug =
+        await this.componentsService.resolveComponentApiSlug(
+          projectSlug,
+          componentSlug,
+        );
       
       // Build the complete search query by combining user query with scope filters
       const queryParts = [searchQuery];
       queryParts.push(`project:${projectSlug}`);
-      queryParts.push(`component:${componentSlug}`);
+      queryParts.push(`component:${decodeURIComponent(apiComponentSlug)}`);
       queryParts.push(`language:${languageCode}`);
       
       // Use the generated SDK with extended types to include the missing 'q' parameter
@@ -533,4 +547,4 @@ export class WeblateTranslationsService {
     
     return parts;
   }
-} 
+}

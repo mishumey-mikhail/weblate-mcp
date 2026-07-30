@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { WeblateClientService } from '../weblate-client.service';
+import { WeblateComponentsService } from './components.service';
 import { 
   changesList, 
   projectsChangesRetrieve, 
@@ -12,7 +13,10 @@ import {
 export class WeblateChangesService {
   private readonly logger = new Logger(WeblateChangesService.name);
 
-  constructor(private weblateClientService: WeblateClientService) {}
+  constructor(
+    private weblateClientService: WeblateClientService,
+    private componentsService: WeblateComponentsService,
+  ) {}
 
   /**
    * Get recent changes across all projects
@@ -99,12 +103,17 @@ export class WeblateChangesService {
   ): Promise<{ results: Change[]; count: number; next?: string; previous?: string }> {
     try {
       const client = this.weblateClientService.getClient();
+      const apiComponentSlug =
+        await this.componentsService.resolveComponentApiSlug(
+          projectSlug,
+          componentSlug,
+        );
       
       const response = await componentsChangesRetrieve({
         client,
         path: { 
           project__slug: projectSlug,
-          slug: componentSlug 
+          slug: apiComponentSlug,
         },
       });
       
@@ -183,4 +192,4 @@ export class WeblateChangesService {
       throw new Error(`Failed to get changes by user: ${error.message}`);
     }
   }
-} 
+}

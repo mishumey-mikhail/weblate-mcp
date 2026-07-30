@@ -73,7 +73,6 @@ describe('WeblateStatisticsTool', () => {
 
     const result = formatLanguageStatistics('en', {
       name: 'English',
-      code: 'en',
       total: 420,
       translated: 420,
       translated_percent: 100,
@@ -83,5 +82,6 @@ describe('WeblateStatisticsTool', () => {
 
     expect(result).toContain('- ❌ Untranslated: 0.0%');
     expect(result).toContain('- ❌ Untranslated: 0');
+    expect(result).toContain('- 🔤 Code: en');
   });
 });

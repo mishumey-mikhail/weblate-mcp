@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { type ConfigService } from '@nestjs/config';
 import { BaseWeblateService } from './base-weblate.service';
+import { WeblateComponentsService } from './components.service';
 import { type Component, type Project, type Unit } from '../../client';
 import {
   type WeblateChangeDetails,
@@ -11,6 +13,13 @@ import {
 
 @Injectable()
 export class WeblateReadonlyService extends BaseWeblateService {
+  constructor(
+    configService: ConfigService,
+    private readonly componentsService: WeblateComponentsService,
+  ) {
+    super(configService);
+  }
+
   async getUnitDetails(unitId: string): Promise<Unit> {
     return this.get<Unit>(`/units/${encodeURIComponent(unitId)}/`);
   }
@@ -37,8 +46,13 @@ export class WeblateReadonlyService extends BaseWeblateService {
     componentSlug: string,
     languageCode: string,
   ): Promise<Record<string, unknown>> {
+    const apiComponentSlug =
+      await this.componentsService.resolveComponentApiSlug(
+        projectSlug,
+        componentSlug,
+      );
     return this.get<Record<string, unknown>>(
-      `/translations/${this.path(projectSlug)}/${this.path(componentSlug)}/${this.path(languageCode)}/`,
+      `/translations/${this.path(projectSlug)}/${this.path(apiComponentSlug)}/${this.path(languageCode)}/`,
     );
   }
 
@@ -50,8 +64,13 @@ export class WeblateReadonlyService extends BaseWeblateService {
     projectSlug: string,
     componentSlug: string,
   ): Promise<Component> {
+    const apiComponentSlug =
+      await this.componentsService.resolveComponentApiSlug(
+        projectSlug,
+        componentSlug,
+      );
     return this.get<Component>(
-      `/components/${this.path(projectSlug)}/${this.path(componentSlug)}/`,
+      `/components/${this.path(projectSlug)}/${this.path(apiComponentSlug)}/`,
     );
   }
 
@@ -62,7 +81,12 @@ export class WeblateReadonlyService extends BaseWeblateService {
     unitId: string,
     limit = 100,
   ): Promise<WeblateChangeDetails[]> {
-    const path = `/translations/${this.path(projectSlug)}/${this.path(componentSlug)}/${this.path(languageCode)}/changes/`;
+    const apiComponentSlug =
+      await this.componentsService.resolveComponentApiSlug(
+        projectSlug,
+        componentSlug,
+      );
+    const path = `/translations/${this.path(projectSlug)}/${this.path(apiComponentSlug)}/${this.path(languageCode)}/changes/`;
     const matchingChanges: WeblateChangeDetails[] = [];
     let page = 1;
 
@@ -92,8 +116,13 @@ export class WeblateReadonlyService extends BaseWeblateService {
     page = 1,
     pageSize = 100,
   ): Promise<WeblatePaginatedResponse<Unit>> {
+    const apiComponentSlug =
+      await this.componentsService.resolveComponentApiSlug(
+        projectSlug,
+        componentSlug,
+      );
     return this.getPaginated<Unit>(
-      `/translations/${this.path(projectSlug)}/${this.path(componentSlug)}/${this.path(languageCode)}/units/`,
+      `/translations/${this.path(projectSlug)}/${this.path(apiComponentSlug)}/${this.path(languageCode)}/units/`,
       { page, page_size: pageSize },
     );
   }
@@ -103,8 +132,13 @@ export class WeblateReadonlyService extends BaseWeblateService {
     componentSlug: string,
     unitId: string,
   ): Promise<WeblateScreenshot[]> {
+    const apiComponentSlug =
+      await this.componentsService.resolveComponentApiSlug(
+        projectSlug,
+        componentSlug,
+      );
     const screenshots = await this.getPaginated<WeblateScreenshot>(
-      `/components/${this.path(projectSlug)}/${this.path(componentSlug)}/screenshots/`,
+      `/components/${this.path(projectSlug)}/${this.path(apiComponentSlug)}/screenshots/`,
       { page_size: 100 },
     );
     const relatedScreenshots = screenshots.results.filter((screenshot) =>
@@ -143,14 +177,24 @@ export class WeblateReadonlyService extends BaseWeblateService {
           'componentSlug is required for component repository status',
         );
       }
-      path = `/components/${this.path(projectSlug)}/${this.path(componentSlug)}/repository/`;
+      const apiComponentSlug =
+        await this.componentsService.resolveComponentApiSlug(
+          projectSlug,
+          componentSlug,
+        );
+      path = `/components/${this.path(projectSlug)}/${this.path(apiComponentSlug)}/repository/`;
     } else {
       if (!componentSlug || !languageCode) {
         throw new Error(
           'componentSlug and languageCode are required for translation repository status',
         );
       }
-      path = `/translations/${this.path(projectSlug)}/${this.path(componentSlug)}/${this.path(languageCode)}/repository/`;
+      const apiComponentSlug =
+        await this.componentsService.resolveComponentApiSlug(
+          projectSlug,
+          componentSlug,
+        );
+      path = `/translations/${this.path(projectSlug)}/${this.path(apiComponentSlug)}/${this.path(languageCode)}/repository/`;
     }
 
     return this.get<WeblateRepositoryStatus>(path);

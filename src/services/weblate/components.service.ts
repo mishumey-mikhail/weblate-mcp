@@ -2,6 +2,36 @@ import { Injectable, Logger } from '@nestjs/common';
 import { WeblateClientService } from '../weblate-client.service';
 import { projectsComponentsRetrieve, type Component } from '../../client';
 
+export function getComponentApiSlug(
+  projectSlug: string,
+  component: Pick<Component, 'slug' | 'statistics_url'>,
+): string {
+  try {
+    const statisticsPath = new URL(
+      component.statistics_url,
+      'http://weblate.local',
+    ).pathname;
+    const prefix = `/components/${encodeURIComponent(projectSlug)}/`;
+    const suffix = '/statistics/';
+    const prefixIndex = statisticsPath.indexOf(prefix);
+
+    if (prefixIndex >= 0 && statisticsPath.endsWith(suffix)) {
+      const encodedSlug = statisticsPath.slice(
+        prefixIndex + prefix.length,
+        -suffix.length,
+      );
+      if (encodedSlug) {
+        // Weblate returns nested component slugs double-encoded in URL fields.
+        return decodeURIComponent(encodedSlug);
+      }
+    }
+  } catch {
+    // Возвращаем публичный slug, если URL компонента имеет неожиданный формат.
+  }
+
+  return component.slug;
+}
+
 @Injectable()
 export class WeblateComponentsService {
   private readonly logger = new Logger(WeblateComponentsService.name);
@@ -43,4 +73,19 @@ export class WeblateComponentsService {
       throw new Error(`Failed to list components: ${error.message}`);
     }
   }
-} 
+
+  async resolveComponentApiSlug(
+    projectSlug: string,
+    componentSlug: string,
+  ): Promise<string> {
+    if (/%2f/i.test(componentSlug)) {
+      return componentSlug;
+    }
+
+    const components = await this.listComponents(projectSlug);
+    const component = components.find(({ slug }) => slug === componentSlug);
+    return component
+      ? getComponentApiSlug(projectSlug, component)
+      : componentSlug;
+  }
+}

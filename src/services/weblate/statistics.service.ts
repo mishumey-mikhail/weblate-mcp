@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { WeblateClientService } from '../weblate-client.service';
-import { WeblateComponentsService } from './components.service';
+import {
+  getComponentApiSlug,
+  WeblateComponentsService,
+} from './components.service';
 import { WeblateLanguagesService } from './languages.service';
 import {
   projectsStatisticsRetrieve,
@@ -9,8 +12,6 @@ import {
   languagesStatisticsRetrieve,
   usersStatisticsRetrieve,
 } from '../../client';
-import { type Component } from '../../client';
-
 type NumericStatisticKey =
   | 'total'
   | 'translated'
@@ -121,36 +122,6 @@ function aggregateComponentStatistics(
   };
 }
 
-function getComponentApiSlug(
-  projectSlug: string,
-  component: Pick<Component, 'slug' | 'statistics_url'>,
-): string {
-  try {
-    const statisticsPath = new URL(
-      component.statistics_url,
-      'http://weblate.local',
-    ).pathname;
-    const prefix = `/components/${encodeURIComponent(projectSlug)}/`;
-    const suffix = '/statistics/';
-    const prefixIndex = statisticsPath.indexOf(prefix);
-
-    if (prefixIndex >= 0 && statisticsPath.endsWith(suffix)) {
-      const encodedSlug = statisticsPath.slice(
-        prefixIndex + prefix.length,
-        -suffix.length,
-      );
-      if (encodedSlug) {
-        // Weblate returns nested component slugs double-encoded in URL fields.
-        return decodeURIComponent(encodedSlug);
-      }
-    }
-  } catch {
-    // Fall back to the public component slug when the URL is malformed.
-  }
-
-  return component.slug;
-}
-
 @Injectable()
 export class WeblateStatisticsService {
   private readonly logger = new Logger(WeblateStatisticsService.name);
@@ -193,7 +164,7 @@ export class WeblateStatisticsService {
    */
   async getComponentStatistics(projectSlug: string, componentSlug: string) {
     try {
-      const apiComponentSlug = await this.resolveComponentApiSlug(
+      const apiComponentSlug = await this.componentsService.resolveComponentApiSlug(
         projectSlug,
         componentSlug,
       );
@@ -229,21 +200,6 @@ export class WeblateStatisticsService {
     return aggregateComponentStatistics(response.data);
   }
 
-  private async resolveComponentApiSlug(
-    projectSlug: string,
-    componentSlug: string,
-  ): Promise<string> {
-    if (/%2f/i.test(componentSlug)) {
-      return componentSlug;
-    }
-
-    const components = await this.componentsService.listComponents(projectSlug);
-    const component = components.find(({ slug }) => slug === componentSlug);
-    return component
-      ? getComponentApiSlug(projectSlug, component)
-      : componentSlug;
-  }
-
   /**
    * Get translation statistics for a specific language in a component
    */
@@ -253,11 +209,16 @@ export class WeblateStatisticsService {
     languageCode: string,
   ) {
     try {
+      const apiComponentSlug =
+        await this.componentsService.resolveComponentApiSlug(
+          projectSlug,
+          componentSlug,
+        );
       const response = await translationsStatisticsRetrieve({
         client: this.clientService.getClient(),
         path: {
           component__project__slug: projectSlug,
-          component__slug: componentSlug,
+          component__slug: apiComponentSlug,
           language__code: languageCode,
         },
         query: { format: 'json' },
