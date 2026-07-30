@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { BaseWeblateService } from './base-weblate.service';
 import { WeblateComponentsService } from './components.service';
 import { type Component, type Project, type Unit } from '../../client';
