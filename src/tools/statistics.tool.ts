@@ -4,6 +4,32 @@ import { z } from 'zod';
 import { WeblateApiService } from '../services';
 import { WeblateStatisticsService } from '../services/weblate/statistics.service';
 
+type DerivedUntranslatedStatistics = {
+  count: number | string;
+  percent: number | string;
+};
+
+function deriveUntranslatedStatistics(
+  stats: any,
+): DerivedUntranslatedStatistics {
+  const total = stats?.total;
+  const translated = stats?.translated;
+  const count =
+    typeof stats?.nottranslated === 'number'
+      ? stats.nottranslated
+      : typeof total === 'number' && typeof translated === 'number'
+        ? Math.max(total - translated, 0)
+        : 'N/A';
+  const percent =
+    typeof stats?.nottranslated_percent === 'number'
+      ? stats.nottranslated_percent
+      : typeof count === 'number' && typeof total === 'number' && total > 0
+        ? (count / total) * 100
+        : 'N/A';
+
+  return { count, percent };
+}
+
 @Injectable()
 export class WeblateStatisticsTool {
   private readonly logger = new Logger(WeblateStatisticsTool.name);
@@ -289,6 +315,7 @@ export class WeblateStatisticsTool {
     const formatPercent = (value: any) => {
       return typeof value === 'number' ? `${value.toFixed(1)}%` : 'N/A';
     };
+    const untranslated = deriveUntranslatedStatistics(stats);
 
     return `## 📊 Project Statistics: ${stats?.name || projectSlug}
 
@@ -296,13 +323,13 @@ export class WeblateStatisticsTool {
 - 🎯 Translation Progress: ${formatPercent(getStatValue('translated_percent'))}
 - ✅ Approved: ${formatPercent(getStatValue('approved_percent'))}
 - 🔍 Needs Review: ${formatPercent(getStatValue('readonly_percent'))}
-- ❌ Untranslated: ${formatPercent(getStatValue('nottranslated_percent'))}
+- ❌ Untranslated: ${formatPercent(untranslated.percent)}
 
 **String Counts:**
 - 📝 Total Strings: ${getStatValue('total')}
 - ✅ Translated: ${getStatValue('translated')}
 - 🎯 Approved: ${getStatValue('approved')}
-- ❌ Untranslated: ${getStatValue('nottranslated')}
+- ❌ Untranslated: ${untranslated.count}
 - 🔍 Read-only: ${getStatValue('readonly')}
 
 **Project Details:**
@@ -318,6 +345,7 @@ export class WeblateStatisticsTool {
     const formatPercent = (value: any) => {
       return typeof value === 'number' ? `${value.toFixed(1)}%` : 'N/A';
     };
+    const untranslated = deriveUntranslatedStatistics(stats);
 
     return `## 📊 Component Statistics: ${stats?.name || componentSlug}
 
@@ -328,13 +356,13 @@ export class WeblateStatisticsTool {
 - 🎯 Translated: ${formatPercent(getStatValue('translated_percent'))}
 - ✅ Approved: ${formatPercent(getStatValue('approved_percent'))}
 - 🔍 Needs Review: ${formatPercent(getStatValue('readonly_percent'))}
-- ❌ Untranslated: ${formatPercent(getStatValue('nottranslated_percent'))}
+- ❌ Untranslated: ${formatPercent(untranslated.percent)}
 
 **String Counts:**
 - 📝 Total: ${getStatValue('total')}
 - ✅ Translated: ${getStatValue('translated')}
 - 🎯 Approved: ${getStatValue('approved')}
-- ❌ Untranslated: ${getStatValue('nottranslated')}
+- ❌ Untranslated: ${untranslated.count}
 
 **Component Details:**
 - 🌐 URL: ${stats?.web_url || 'N/A'}
@@ -354,6 +382,7 @@ export class WeblateStatisticsTool {
     const formatPercent = (value: any) => {
       return typeof value === 'number' ? `${value.toFixed(1)}%` : 'N/A';
     };
+    const untranslated = deriveUntranslatedStatistics(stats);
 
     return `## 📊 Translation Statistics
 
@@ -363,13 +392,13 @@ export class WeblateStatisticsTool {
 - 🎯 Translated: ${formatPercent(getStatValue('translated_percent'))}
 - ✅ Approved: ${formatPercent(getStatValue('approved_percent'))}
 - 🔍 Needs Review: ${formatPercent(getStatValue('readonly_percent'))}
-- ❌ Untranslated: ${formatPercent(getStatValue('nottranslated_percent'))}
+- ❌ Untranslated: ${formatPercent(untranslated.percent)}
 
 **String Details:**
 - 📝 Total Strings: ${getStatValue('total')}
 - ✅ Translated: ${getStatValue('translated')}
 - 🎯 Approved: ${getStatValue('approved')}
-- ❌ Untranslated: ${getStatValue('nottranslated')}
+- ❌ Untranslated: ${untranslated.count}
 - 🔍 Readonly: ${getStatValue('readonly')}
 
 **Quality Metrics:**
@@ -499,4 +528,4 @@ ${progressBar} ${formatPercent(stats.translated_percent)}
     const empty = Math.max(0, width - filled);
     return `[${'█'.repeat(filled)}${'░'.repeat(empty)}]`;
   }
-} 
+}
