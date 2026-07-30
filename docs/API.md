@@ -203,6 +203,8 @@ Search translation units using Weblate's powerful filtering syntax. This is the 
 - `source:"login"` - Find strings containing "login" in source text
 - `target:"bonjour"` - Find strings containing "bonjour" in target text
 - `has:suggestion` - Find strings with suggestions
+- `has:check` - Find strings with any failing quality check
+- `check:newline-count` - Find strings with one specific failing check
 - `component:common AND state:=0` - Complex queries with multiple filters
 
 **Returns:**
@@ -227,6 +229,16 @@ Search translation units using Weblate's powerful filtering syntax. This is the 
   }
 }
 ```
+
+### `searchUnitsWithFailingChecks`
+
+Read-only convenience search for translation units with failing Weblate
+quality checks. Omit `checkId` to use `has:check`, or provide a Weblate check
+identifier such as `newline-count` to use `check:newline-count`.
+
+The `componentSlug` argument is the public component slug. Nested category
+paths are resolved internally and must not be passed as double-encoded API
+paths.
 
 ### `searchStringInProject`
 

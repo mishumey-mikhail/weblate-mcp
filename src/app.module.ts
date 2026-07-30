@@ -43,6 +43,7 @@ Translation Management:
 - listComponents: List components in a specific project
 - listLanguages: List languages available in a specific project
 - searchStringInProject: Search for translations containing specific text
+- searchUnitsWithFailingChecks: Search read-only units with failing quality checks
 - getTranslationForKey: Get translation value for a specific key
 - writeTranslation: Write or update a translation value
 - searchTranslationsByKey: Search for translations by key pattern

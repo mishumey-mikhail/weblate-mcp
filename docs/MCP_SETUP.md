@@ -106,6 +106,7 @@ Once configured, you'll have access to these translation management tools:
 - **listComponents** - List components in a specific project
 - **listLanguages** - List languages available in a project
 - **searchUnitsWithFilters** ⭐ - **Efficient search using Weblate's native filtering syntax**
+- **searchUnitsWithFailingChecks** - Read-only search for units with failing quality checks
 - **searchStringInProject** - Search for translations containing specific text
 - **getTranslationForKey** - Get translation value for a specific key
 - **writeTranslation** - Write or update a translation value
@@ -163,6 +164,10 @@ Instead of asking for "all translation keys" and then checking each one individu
 
 - **❌ Inefficient**: "List all keys, then check each one for translation status"
 - **✅ Efficient**: "Search for untranslated strings using `state:=0` filter"
+
+For quality checks, use `searchUnitsWithFailingChecks` or the native query
+filters `has:check` and `check:<check-id>`. The component argument is always
+the public component slug, including for components nested in a category.
 
 The `searchUnitsWithFilters` tool uses Weblate's native search capabilities for optimal performance.
 

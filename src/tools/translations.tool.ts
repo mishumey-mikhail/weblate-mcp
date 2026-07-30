@@ -445,6 +445,93 @@ export class WeblateTranslationsTool {
     }
   }
 
+  @Tool({
+    name: 'searchUnitsWithFailingChecks',
+    description:
+      'Search read-only translation units with failing Weblate quality checks. Use checkId for one specific check, or omit it to find any failing check.',
+    parameters: z.object({
+      projectSlug: z.string().describe('The slug of the project to search in'),
+      componentSlug: z.string().describe('The public slug of the component'),
+      languageCode: z.string().describe('The target language code, e.g. en'),
+      checkId: z
+        .string()
+        .trim()
+        .min(1)
+        .optional()
+        .describe('Optional Weblate check identifier, e.g. newline-count'),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(200)
+        .optional()
+        .default(50)
+        .describe('Maximum number of results to return'),
+    }),
+  })
+  async searchUnitsWithFailingChecks({
+    projectSlug,
+    componentSlug,
+    languageCode,
+    checkId,
+    limit = 50,
+  }: {
+    projectSlug: string;
+    componentSlug: string;
+    languageCode: string;
+    checkId?: string;
+    limit?: number;
+  }) {
+    try {
+      const results = await this.weblateApiService.searchUnitsWithFailingChecks(
+        projectSlug,
+        componentSlug,
+        languageCode,
+        checkId,
+        Math.min(limit, 200),
+      );
+
+      if (results.length === 0) {
+        const scope = `${projectSlug}/${componentSlug}/${languageCode}`;
+        const check = checkId ? `check "${checkId}"` : 'any failing check';
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `No units found in ${scope} with ${check}`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: this.formatFilteredResults(
+              results,
+              projectSlug,
+              componentSlug,
+              languageCode,
+              checkId ? `check:${checkId}` : 'has:check',
+            ),
+          },
+        ],
+      };
+    } catch (error) {
+      this.logger.error('Failed to search units with failing checks', error);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error searching units with failing checks: ${error.message}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
   private formatTranslationResult(translation: Unit): string {
     const status = translation.approved
       ? '✅ Approved'
@@ -508,4 +595,4 @@ export class WeblateTranslationsTool {
 
     return `Found ${results.length} units in ${projectSlug}/${componentSlug}/${languageCode} matching query "${searchQuery}":\n\n${formattedResults}${totalText}`;
   }
-} 
+}

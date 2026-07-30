@@ -1,8 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { WeblateClientService } from '../weblate-client.service';
-import { WeblateComponentsService } from './components.service';
 import { unitsList, unitsPartialUpdate, translationsUnitsRetrieve, type Unit, type PaginatedUnitList, type UnitsListData, type TranslationsUnitsRetrieveData } from '../../client';
 import { SearchIn } from '../../types';
+
+function searchValue(value: string): string {
+  return /\s/.test(value)
+    ? `"${value.replace(/(["\\])/g, '\\$1')}"`
+    : value;
+}
 
 @Injectable()
 export class WeblateTranslationsService {
@@ -10,7 +15,6 @@ export class WeblateTranslationsService {
 
   constructor(
     private weblateClientService: WeblateClientService,
-    private componentsService: WeblateComponentsService,
   ) {}
 
   async searchTranslations(
@@ -41,12 +45,10 @@ export class WeblateTranslationsService {
       
       // Add component filter if specified
       if (componentSlug) {
-        const apiComponentSlug =
-          await this.componentsService.resolveComponentApiSlug(
-            projectSlug,
-            componentSlug,
-          );
-        q_parts.push(`component:${decodeURIComponent(apiComponentSlug)}`);
+        // Search uses the public component slug. The API path for a nested
+        // component is encoded differently (for example, category%252Fslug)
+        // and must not be used in Weblate's q syntax.
+        q_parts.push(`component:${searchValue(componentSlug)}`);
       }
       
       // Add language filter if specified
@@ -385,16 +387,13 @@ export class WeblateTranslationsService {
   ): Promise<Unit[]> {
     try {
       const client = this.weblateClientService.getClient();
-      const apiComponentSlug =
-        await this.componentsService.resolveComponentApiSlug(
-          projectSlug,
-          componentSlug,
-        );
       
       // Build the complete search query by combining user query with scope filters
       const queryParts = [searchQuery];
       queryParts.push(`project:${projectSlug}`);
-      queryParts.push(`component:${decodeURIComponent(apiComponentSlug)}`);
+      // Keep the public slug in the search filter. Nested component API paths
+      // are double-encoded for REST URLs and are not valid q filter values.
+      queryParts.push(`component:${searchValue(componentSlug)}`);
       queryParts.push(`language:${languageCode}`);
       
       // Use the generated SDK with extended types to include the missing 'q' parameter
@@ -426,6 +425,23 @@ export class WeblateTranslationsService {
         `Failed to search units: ${error.message}`,
       );
     }
+  }
+
+  async searchUnitsWithFailingChecks(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    checkId?: string,
+    limit = 50,
+  ): Promise<Unit[]> {
+    const query = checkId ? `check:${searchValue(checkId)}` : 'has:check';
+    return this.searchUnitsWithQuery(
+      projectSlug,
+      componentSlug,
+      languageCode,
+      query,
+      limit,
+    );
   }
 
   /**

@@ -239,6 +239,22 @@ export class WeblateApiService {
     );
   }
 
+  async searchUnitsWithFailingChecks(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    checkId?: string,
+    limit = 50,
+  ): Promise<Unit[]> {
+    return this.translationsService.searchUnitsWithFailingChecks(
+      projectSlug,
+      componentSlug,
+      languageCode,
+      checkId,
+      limit,
+    );
+  }
+
   // Translation Memory methods
   async lookupTranslationMemory(
     sourceLanguage: string,

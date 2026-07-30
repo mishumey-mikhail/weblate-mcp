@@ -145,6 +145,7 @@ For development or local builds:
 | Tool | Description |
 |------|-------------|
 | **`searchUnitsWithFilters`** ⭐ | **Efficient search using Weblate's native filtering syntax** |
+| **`searchUnitsWithFailingChecks`** | Find read-only units with failing quality checks |
 | **`searchStringInProject`** | Search for translations containing specific text in a project |
 | **`getTranslationForKey`** | Get translation value for a specific key |
 | **`writeTranslation`** | Update or write translation values with approval support |
@@ -183,7 +184,14 @@ The `searchUnitsWithFilters` tool uses Weblate's native filtering syntax, making
 - `state:=0` - Find untranslated strings
 - `state:=10` - Find strings that need editing
 - `source:"login"` - Find strings containing "login"
+- `has:check` - Find strings with any failing quality check
+- `check:newline-count` - Find strings with one specific failing check
 - `component:common AND state:=0` - Complex filters
+
+`searchUnitsWithFailingChecks` is a read-only convenience tool for the two
+quality-check queries above. Use the public component slug, including for
+components nested inside a Weblate category; the server resolves nested API
+paths internally.
 
 ### 🌐 Language Management
 | Tool | Description |
