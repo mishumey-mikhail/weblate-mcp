@@ -10,6 +10,116 @@ import {
   usersStatisticsRetrieve,
 } from '../../client';
 
+type NumericStatisticKey =
+  | 'total'
+  | 'translated'
+  | 'approved'
+  | 'readonly'
+  | 'failing'
+  | 'suggestions'
+  | 'comments';
+
+interface ComponentLanguageStatistics {
+  total?: number;
+  translated?: number;
+  translated_percent?: number;
+  approved?: number;
+  approved_percent?: number;
+  readonly?: number;
+  readonly_percent?: number;
+  failing?: number;
+  failing_percent?: number;
+  suggestions?: number;
+  comments?: number;
+  fuzzy?: number;
+}
+
+interface ComponentStatistics {
+  total: number;
+  translated: number;
+  translated_percent: number;
+  approved: number;
+  approved_percent: number;
+  readonly: number;
+  readonly_percent: number;
+  nottranslated: number;
+  nottranslated_percent: number;
+  failing: number;
+  failing_percent: number;
+  suggestions: number;
+  comments: number;
+  languages: ComponentLanguageStatistics[];
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function sumStatistic(
+  statistics: ComponentLanguageStatistics[],
+  key: NumericStatisticKey,
+): number {
+  return statistics.reduce((sum, statistic) => {
+    const value = statistic[key];
+    return sum + (typeof value === 'number' ? value : 0);
+  }, 0);
+}
+
+function aggregateComponentStatistics(
+  response: unknown,
+): ComponentStatistics | Record<string, unknown> {
+  if (!response || typeof response !== 'object') {
+    return {};
+  }
+
+  const payload = response as {
+    results?: ComponentLanguageStatistics[];
+  };
+
+  if (!Array.isArray(payload.results)) {
+    return response as ComponentStatistics;
+  }
+
+  const languages = payload.results;
+  const total = sumStatistic(languages, 'total');
+  const translated = sumStatistic(languages, 'translated');
+  const approved = sumStatistic(languages, 'approved');
+  const readonly = sumStatistic(languages, 'readonly');
+  const failing = sumStatistic(languages, 'failing');
+  const suggestions = sumStatistic(languages, 'suggestions');
+  const comments = sumStatistic(languages, 'comments');
+  const nottranslated = Math.max(total - translated, 0);
+
+  return {
+    total,
+    translated,
+    translated_percent: total ? (translated / total) * 100 : 0,
+    approved,
+    approved_percent: total ? (approved / total) * 100 : 0,
+    readonly,
+    readonly_percent: total ? (readonly / total) * 100 : 0,
+    nottranslated,
+    nottranslated_percent: total ? (nottranslated / total) * 100 : 0,
+    failing,
+    failing_percent: total ? (failing / total) * 100 : 0,
+    suggestions,
+    comments,
+    languages,
+  };
+}
+
 @Injectable()
 export class WeblateStatisticsService {
   private readonly logger = new Logger(WeblateStatisticsService.name);
@@ -32,12 +142,17 @@ export class WeblateStatisticsService {
       });
 
       if (response.error) {
-        throw new Error(`Failed to get project statistics: ${response.error}`);
+        throw new Error(
+          `Failed to get project statistics: ${getErrorMessage(response.error)}`,
+        );
       }
 
       return response.data;
     } catch (error) {
-      this.logger.error(`Failed to get project statistics for ${projectSlug}`, error);
+      this.logger.error(
+        `Failed to get project statistics for ${projectSlug}`,
+        error,
+      );
       throw error;
     }
   }
@@ -49,20 +164,25 @@ export class WeblateStatisticsService {
     try {
       const response = await componentsStatisticsRetrieve({
         client: this.clientService.getClient(),
-        path: { 
+        path: {
           project__slug: projectSlug,
-          slug: componentSlug 
+          slug: componentSlug,
         },
         query: { format: 'json' },
       });
 
       if (response.error) {
-        throw new Error(`Failed to get component statistics: ${response.error}`);
+        throw new Error(
+          `Failed to get component statistics: ${getErrorMessage(response.error)}`,
+        );
       }
 
-      return response.data;
+      return aggregateComponentStatistics(response.data);
     } catch (error) {
-      this.logger.error(`Failed to get component statistics for ${projectSlug}/${componentSlug}`, error);
+      this.logger.error(
+        `Failed to get component statistics for ${projectSlug}/${componentSlug}`,
+        error,
+      );
       throw error;
     }
   }
@@ -87,7 +207,9 @@ export class WeblateStatisticsService {
       });
 
       if (response.error) {
-        throw new Error(`Failed to get translation statistics: ${response.error}`);
+        throw new Error(
+          `Failed to get translation statistics: ${getErrorMessage(response.error)}`,
+        );
       }
 
       return response.data;
@@ -112,12 +234,17 @@ export class WeblateStatisticsService {
       });
 
       if (response.error) {
-        throw new Error(`Failed to get language statistics: ${response.error}`);
+        throw new Error(
+          `Failed to get language statistics: ${getErrorMessage(response.error)}`,
+        );
       }
 
       return response.data;
     } catch (error) {
-      this.logger.error(`Failed to get language statistics for ${languageCode}`, error);
+      this.logger.error(
+        `Failed to get language statistics for ${languageCode}`,
+        error,
+      );
       throw error;
     }
   }
@@ -134,7 +261,9 @@ export class WeblateStatisticsService {
       });
 
       if (response.error) {
-        throw new Error(`Failed to get user statistics: ${response.error}`);
+        throw new Error(
+          `Failed to get user statistics: ${getErrorMessage(response.error)}`,
+        );
       }
 
       return response.data;
@@ -159,19 +288,25 @@ export class WeblateStatisticsService {
       const componentStats = await Promise.all(
         components.map(async (component) => {
           try {
-            const stats = await this.getComponentStatistics(projectSlug, component.slug);
+            const stats = await this.getComponentStatistics(
+              projectSlug,
+              component.slug,
+            );
             return {
               component: component.name,
               slug: component.slug,
               statistics: stats,
             };
           } catch (error) {
-            this.logger.warn(`Failed to get stats for component ${component.slug}`, error);
+            const errorMessage = getErrorMessage(error);
+            this.logger.warn(
+              `Failed to get stats for component ${component.slug}: ${errorMessage}`,
+            );
             return {
               component: component.name,
               slug: component.slug,
               statistics: null,
-              error: error.message,
+              error: errorMessage,
             };
           }
         }),
@@ -182,7 +317,10 @@ export class WeblateStatisticsService {
         components: componentStats,
       };
     } catch (error) {
-      this.logger.error(`Failed to get project dashboard for ${projectSlug}`, error);
+      this.logger.error(
+        `Failed to get project dashboard for ${projectSlug}`,
+        error,
+      );
       throw error;
     }
   }
@@ -190,7 +328,10 @@ export class WeblateStatisticsService {
   /**
    * Get translation progress for all languages in a component
    */
-  async getComponentLanguageProgress(projectSlug: string, componentSlug: string) {
+  async getComponentLanguageProgress(
+    projectSlug: string,
+    componentSlug: string,
+  ) {
     try {
       // Get available languages for the project
       const languages = await this.languagesService.listLanguages(projectSlug);
@@ -218,7 +359,7 @@ export class WeblateStatisticsService {
               language: language.name,
               code: language.code,
               statistics: null,
-              error: error.message,
+              error: getErrorMessage(error),
             };
           }
         }),
@@ -233,4 +374,4 @@ export class WeblateStatisticsService {
       throw error;
     }
   }
-} 
+}
