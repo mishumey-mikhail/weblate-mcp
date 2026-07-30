@@ -34,11 +34,14 @@ describe('WeblateStatisticsTool', () => {
       approved: 0,
       approved_percent: 0,
       readonly: 383,
-      readonly_percent: 2.6,
+      readonly_percent: 99,
+      fuzzy: 374,
+      fuzzy_percent: 2.6,
     });
 
     expect(result).toContain('- ❌ Untranslated: 9.6%');
     expect(result).toContain('- ❌ Untranslated: 1385');
+    expect(result).toContain('- 🔍 Needs Review: 2.6%');
   });
 
   it('derives translation untranslated values when Weblate omits them', () => {
@@ -57,10 +60,13 @@ describe('WeblateStatisticsTool', () => {
       approved_percent: 0,
       readonly: 0,
       readonly_percent: 0,
+      fuzzy: 12,
+      fuzzy_percent: 12,
     });
 
     expect(result).toContain('- ❌ Untranslated: 60.0%');
     expect(result).toContain('- ❌ Untranslated: 60');
+    expect(result).toContain('- 🔍 Needs Review: 12.0%');
   });
 
   it('derives language untranslated values when Weblate omits them', () => {

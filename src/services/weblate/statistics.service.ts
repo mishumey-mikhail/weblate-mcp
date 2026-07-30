@@ -17,6 +17,7 @@ type NumericStatisticKey =
   | 'translated'
   | 'approved'
   | 'readonly'
+  | 'fuzzy'
   | 'failing'
   | 'suggestions'
   | 'comments';
@@ -29,11 +30,12 @@ interface ComponentLanguageStatistics {
   approved_percent?: number;
   readonly?: number;
   readonly_percent?: number;
+  fuzzy?: number;
+  fuzzy_percent?: number;
   failing?: number;
   failing_percent?: number;
   suggestions?: number;
   comments?: number;
-  fuzzy?: number;
 }
 
 interface ComponentStatistics {
@@ -44,6 +46,8 @@ interface ComponentStatistics {
   approved_percent: number;
   readonly: number;
   readonly_percent: number;
+  fuzzy: number;
+  fuzzy_percent: number;
   nottranslated: number;
   nottranslated_percent: number;
   failing: number;
@@ -99,6 +103,7 @@ function aggregateComponentStatistics(
   const translated = sumStatistic(languages, 'translated');
   const approved = sumStatistic(languages, 'approved');
   const readonly = sumStatistic(languages, 'readonly');
+  const fuzzy = sumStatistic(languages, 'fuzzy');
   const failing = sumStatistic(languages, 'failing');
   const suggestions = sumStatistic(languages, 'suggestions');
   const comments = sumStatistic(languages, 'comments');
@@ -112,6 +117,8 @@ function aggregateComponentStatistics(
     approved_percent: total ? (approved / total) * 100 : 0,
     readonly,
     readonly_percent: total ? (readonly / total) * 100 : 0,
+    fuzzy,
+    fuzzy_percent: total ? (fuzzy / total) * 100 : 0,
     nottranslated,
     nottranslated_percent: total ? (nottranslated / total) * 100 : 0,
     failing,
