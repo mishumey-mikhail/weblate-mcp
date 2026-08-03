@@ -58,6 +58,7 @@ Translation Memory:
 
 Translation Case Context (read-only):
 - getUnitDetails: Get complete details for one translation unit
+- getUnitChecks: Get quality check IDs, names, descriptions, and limitations for one unit
 - getUnitComments: Get comments attached to a translation unit
 - getUnitHistory: Get history for a translation unit
 - getChangeDetails: Get details for one translation change

@@ -163,6 +163,7 @@ For development or local builds:
 | Tool | Description |
 |------|-------------|
 | **`getUnitDetails`** | Get complete details for one translation unit |
+| **`getUnitChecks`** | Resolve failing quality-check IDs and read-only names/descriptions for one unit |
 | **`getUnitComments`** | Get comments attached to a translation unit |
 | **`getUnitHistory`** | Get history for a translation unit |
 | **`getChangeDetails`** | Get details for one translation change |
@@ -192,6 +193,11 @@ The `searchUnitsWithFilters` tool uses Weblate's native filtering syntax, making
 quality-check queries above. Use the public component slug, including for
 components nested inside a Weblate category; the server resolves nested API
 paths internally.
+
+`getUnitChecks` combines the unit API flag, Weblate's read-only quality-check
+search, and the Weblate UI pages to return check IDs and descriptions. The
+result includes `limitations` and never treats unavailable UI data as a
+confirmed check description.
 
 ### 🌐 Language Management
 | Tool | Description |

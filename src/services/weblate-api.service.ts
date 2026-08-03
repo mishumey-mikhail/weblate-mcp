@@ -24,6 +24,7 @@ import {
   type WeblateRepositoryStatus,
   type WeblateScreenshot,
   type WeblateTranslationMemoryEntry,
+  type WeblateUnitChecksResult,
 } from '../types';
 
 @Injectable()
@@ -274,6 +275,20 @@ export class WeblateApiService {
 
   async getUnitDetails(unitId: string): Promise<Unit> {
     return this.readonlyService.getUnitDetails(unitId);
+  }
+
+  async getUnitChecks(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    unitId: string,
+  ): Promise<WeblateUnitChecksResult> {
+    return this.readonlyService.getUnitChecks(
+      projectSlug,
+      componentSlug,
+      languageCode,
+      unitId,
+    );
   }
 
   async getUnitComments(

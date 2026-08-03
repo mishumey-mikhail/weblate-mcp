@@ -6,6 +6,7 @@ import axios, { AxiosInstance } from 'axios';
 export abstract class BaseWeblateService {
   protected readonly logger = new Logger(this.constructor.name);
   protected readonly apiClient: AxiosInstance;
+  protected readonly webClient: AxiosInstance;
 
   constructor(protected configService: ConfigService) {
     const rawApiUrl = this.configService.get<string>('WEBLATE_API_URL');
@@ -29,6 +30,16 @@ export abstract class BaseWeblateService {
       timeout: 10000, // 10 second timeout
     });
 
+    const webUrl = apiUrl.replace(/\/api\/?$/, '');
+    this.webClient = axios.create({
+      baseURL: webUrl,
+      headers: {
+        Authorization: `Token ${apiToken}`,
+        Accept: 'text/html',
+      },
+      timeout: 10000,
+    });
+
     // Logging disabled for STDIO MCP compatibility
   }
-} 
+}

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BaseWeblateService } from './base-weblate.service';
 import { WeblateComponentsService } from './components.service';
+import { WeblateTranslationsService } from './translations.service';
 import { type Component, type Project, type Unit } from '../../client';
 import {
   type WeblateChangeDetails,
@@ -9,19 +10,145 @@ import {
   type WeblatePaginatedResponse,
   type WeblateRepositoryStatus,
   type WeblateScreenshot,
+  type WeblateUnitCheck,
+  type WeblateUnitChecksResult,
 } from '../../types';
+
+interface ParsedUnitCheck extends WeblateUnitCheck {
+  documentationId: string | null;
+}
 
 @Injectable()
 export class WeblateReadonlyService extends BaseWeblateService {
   constructor(
     configService: ConfigService,
     private readonly componentsService: WeblateComponentsService,
+    private readonly translationsService: WeblateTranslationsService,
   ) {
     super(configService);
   }
 
   async getUnitDetails(unitId: string): Promise<Unit> {
     return this.get<Unit>(`/units/${encodeURIComponent(unitId)}/`);
+  }
+
+  async getUnitChecks(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    unitId: string,
+  ): Promise<WeblateUnitChecksResult> {
+    const unit = await this.getUnitDetails(unitId);
+    const result: WeblateUnitChecksResult = {
+      unitId,
+      scope: { projectSlug, componentSlug, languageCode },
+      hasFailingCheck: unit.has_failing_check,
+      discoveredCheckIds: [],
+      checks: [],
+      detailsAvailable: false,
+      limitations: [],
+    };
+
+    const translationPath = this.getTranslationPath(unit.web_url);
+    if (!translationPath) {
+      result.limitations.push(
+        'Не удалось определить UI-путь translation из web_url unit.',
+      );
+      return result;
+    }
+
+    let checksIndexHtml: string;
+    try {
+      checksIndexHtml = await this.getWebPage(
+        `/checks/-/${translationPath}/`,
+      );
+    } catch (error) {
+      result.limitations.push(
+        `Не удалось получить read-only страницу списка checks: ${this.errorMessage(error)}`,
+      );
+      return result;
+    }
+
+    result.discoveredCheckIds = this.extractCheckIds(
+      checksIndexHtml,
+      translationPath,
+    );
+    if (result.discoveredCheckIds.length === 0) {
+      result.limitations.push(
+        'Weblate REST API не возвращает список check IDs, а UI-страница не дала доступных ссылок на проверки.',
+      );
+      return result;
+    }
+
+    const checkMatches = await Promise.allSettled(
+      result.discoveredCheckIds.map(async (checkId) => ({
+        checkId,
+        units: await this.translationsService.searchUnitsWithFailingChecks(
+          projectSlug,
+          componentSlug,
+          languageCode,
+          checkId,
+          200,
+        ),
+      })),
+    );
+    const matchingCheckIds = checkMatches
+      .filter(
+        (match): match is PromiseFulfilledResult<{
+          checkId: string;
+          units: Unit[];
+        }> => match.status === 'fulfilled',
+      )
+      .filter(({ value }) =>
+        value.units.some((candidate) => String(candidate.id) === unitId),
+      )
+      .map(({ value }) => value.checkId);
+
+    const failedQueries = checkMatches.filter(
+      (match): match is PromiseRejectedResult => match.status === 'rejected',
+    );
+    if (failedQueries.length > 0) {
+      result.limitations.push(
+        `Не удалось проверить ${failedQueries.length} check ID через Weblate search API.`,
+      );
+    }
+
+    let unitPageHtml: string | null = null;
+    try {
+      unitPageHtml = await this.getWebPage(this.getUnitPagePath(unit.web_url));
+    } catch (error) {
+      result.limitations.push(
+        `Не удалось получить read-only страницу unit с описаниями checks: ${this.errorMessage(error)}`,
+      );
+    }
+
+    const parsedChecks = unitPageHtml
+      ? this.parseUnitCheckBlocks(unitPageHtml)
+      : [];
+    result.checks = matchingCheckIds.map((checkId) => {
+      const parsed = this.findParsedCheck(parsedChecks, checkId);
+      return (
+        parsed ?? {
+          checkId,
+          name: checkId,
+          description: '',
+          dismissed: false,
+          enforced: false,
+          documentationUrl: null,
+          recordId: null,
+        }
+      );
+    });
+    result.detailsAvailable =
+      result.checks.length > 0 &&
+      result.checks.every((check) => Boolean(check.name && check.description));
+    if (!result.detailsAvailable && result.checks.length > 0) {
+      result.limitations.push(
+        'Check ID найден через API, но Weblate UI не вернул полное название или описание.',
+      );
+    }
+
+    return result;
   }
 
   async getUnitComments(
@@ -218,6 +345,22 @@ export class WeblateReadonlyService extends BaseWeblateService {
     }
   }
 
+  private async getWebPage(path: string): Promise<string> {
+    try {
+      const response = await this.webClient.get<string>(path, {
+        headers: { Accept: 'text/html' },
+      });
+      if (typeof response.data !== 'string') {
+        throw new Error('Weblate UI returned a non-HTML response');
+      }
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        `Failed to read Weblate UI endpoint ${path}: ${this.errorMessage(error)}`,
+      );
+    }
+  }
+
   private async getPaginated<T>(
     path: string,
     params?: Record<string, unknown>,
@@ -258,6 +401,164 @@ export class WeblateReadonlyService extends BaseWeblateService {
       value === unitId ||
       (typeof value === 'string' && value.includes(`/units/${unitId}/`))
     );
+  }
+
+  private getTranslationPath(webUrl: string): string | null {
+    try {
+      const pathname = new URL(webUrl, 'http://weblate.local').pathname;
+      const marker = '/translate/';
+      const markerIndex = pathname.indexOf(marker);
+      if (markerIndex < 0) {
+        return null;
+      }
+      return pathname
+        .slice(markerIndex + marker.length)
+        .replace(/^\/+|\/+$/g, '');
+    } catch {
+      return null;
+    }
+  }
+
+  private getUnitPagePath(webUrl: string): string {
+    const parsed = new URL(webUrl, 'http://weblate.local');
+    return `${parsed.pathname}${parsed.search}`;
+  }
+
+  private extractCheckIds(html: string, translationPath: string): string[] {
+    const checkIds = new Set<string>();
+    const hrefPattern = /href=["']([^"']+)["']/gi;
+    for (const match of html.matchAll(hrefPattern)) {
+      try {
+        const href = this.decodeHtmlEntities(match[1]);
+        const parsed = new URL(href, 'http://weblate.local');
+        const parts = parsed.pathname.split('/').filter(Boolean);
+        const checksIndex = parts.indexOf('checks');
+        if (checksIndex < 0 || !parts[checksIndex + 1]) {
+          continue;
+        }
+        const checkId = decodeURIComponent(parts[checksIndex + 1]);
+        const linkedPath = parts.slice(checksIndex + 2).join('/');
+        if (checkId !== '-' && linkedPath === translationPath) {
+          checkIds.add(checkId);
+        }
+      } catch {
+        // Пропускаем внешние и некорректные ссылки в HTML.
+      }
+    }
+    return [...checkIds];
+  }
+
+  private parseUnitCheckBlocks(html: string): ParsedUnitCheck[] {
+    return this.extractDivsWithClass(html, 'check-item')
+      .filter((block) => /class=["'][^"']*\bred\b[^"']*["']/i.test(block))
+      .map((block) => {
+        const documentationMatch = /href=["']([^"']*#([^"'#]+))["']/i.exec(
+          block,
+        );
+        const documentationUrl = documentationMatch
+          ? this.decodeHtmlEntities(documentationMatch[1])
+          : null;
+        const documentationId = documentationMatch
+          ? documentationMatch[2]
+          : null;
+        const heading = /<h5\b[^>]*>([\s\S]*?)<\/h5>/i.exec(block)?.[1] ?? '';
+        const description =
+          /<p\b[^>]*class=["'][^"']*check-description[^"']*["'][^>]*>([\s\S]*?)<\/p>/i.exec(
+            block,
+          )?.[1] ?? '';
+        const recordId = /\/js\/ignore-check\/(\d+)\//i.exec(block)?.[1];
+
+        return {
+          checkId: '',
+          name: this.stripCheckName(heading),
+          description: this.stripHtml(description),
+          dismissed: /check-dismissed/i.test(block),
+          enforced: /text-bg-warning[^>]*>\s*Enforced/i.test(block),
+          documentationUrl,
+          recordId: recordId ? Number(recordId) : null,
+          documentationId,
+        };
+      });
+  }
+
+  private findParsedCheck(
+    checks: ParsedUnitCheck[],
+    checkId: string,
+  ): WeblateUnitCheck | null {
+    const expectedDocumentationIds = new Set([
+      `check-${checkId}`,
+      `check-${checkId.replace(/_/g, '-')}`,
+    ]);
+    const match = checks.find((check) =>
+      check.documentationId
+        ? expectedDocumentationIds.has(check.documentationId)
+        : false,
+    );
+    if (!match) {
+      return null;
+    }
+    const { documentationId: _documentationId, ...result } = match;
+    return { ...result, checkId };
+  }
+
+  private extractDivsWithClass(html: string, className: string): string[] {
+    const tagPattern = /<\/?div\b[^>]*>/gi;
+    const stack: Array<{ start: number; target: boolean }> = [];
+    const result: string[] = [];
+    for (const match of html.matchAll(tagPattern)) {
+      const tag = match[0];
+      if (/^<\//.test(tag)) {
+        const entry = stack.pop();
+        if (entry?.target) {
+          result.push(html.slice(entry.start, (match.index ?? 0) + tag.length));
+        }
+        continue;
+      }
+      const classAttribute = /class=["']([^"']*)["']/i.exec(tag)?.[1] ?? '';
+      stack.push({
+        start: match.index ?? 0,
+        target: classAttribute.split(/\s+/).includes(className),
+      });
+    }
+    return result;
+  }
+
+  private stripHtml(value: string): string {
+    return this.decodeHtmlEntities(
+      value
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    );
+  }
+
+  private stripCheckName(value: string): string {
+    return this.stripHtml(
+      value
+        .replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, '')
+        .replace(
+          /<span\b[^>]*class=["'][^"']*\bred\b[^"']*["'][^>]*>[\s\S]*?<\/span>/gi,
+          '',
+        ),
+    );
+  }
+
+  private decodeHtmlEntities(value: string): string {
+    return value
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&apos;/gi, "'")
+      .replace(/&#(\d+);/g, (_, code: string) =>
+        String.fromCodePoint(Number(code)),
+      )
+      .replace(/&#x([\da-f]+);/gi, (_, code: string) =>
+        String.fromCodePoint(parseInt(code, 16)),
+      );
   }
 
   private path(value: string): string {

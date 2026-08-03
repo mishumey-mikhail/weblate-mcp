@@ -88,6 +88,7 @@ The MCP server provides comprehensive tools for interacting with Weblate:
 
 ### Translation Case Context (read-only)
 - `getUnitDetails` - Get complete details for one translation unit
+- `getUnitChecks` - Resolve failing quality-check IDs and read-only descriptions for one unit
 - `getUnitComments` - Get comments attached to a translation unit
 - `getUnitHistory` - Get history for a translation unit
 - `getChangeDetails` - Get details for one translation change

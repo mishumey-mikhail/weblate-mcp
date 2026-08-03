@@ -207,6 +207,30 @@ export interface WeblateScreenshot {
   image_url?: string;
 }
 
+export interface WeblateUnitCheck {
+  checkId: string;
+  name: string;
+  description: string;
+  dismissed: boolean;
+  enforced: boolean;
+  documentationUrl: string | null;
+  recordId: number | null;
+}
+
+export interface WeblateUnitChecksResult {
+  unitId: string;
+  scope: {
+    projectSlug: string;
+    componentSlug: string;
+    languageCode: string;
+  };
+  hasFailingCheck: boolean;
+  discoveredCheckIds: string[];
+  checks: WeblateUnitCheck[];
+  detailsAvailable: boolean;
+  limitations: string[];
+}
+
 export interface WeblateRepositoryStatus {
   needs_commit: boolean;
   needs_merge: boolean;

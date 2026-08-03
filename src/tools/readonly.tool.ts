@@ -49,6 +49,36 @@ export class WeblateReadonlyTool {
   }
 
   @Tool({
+    name: 'getUnitChecks',
+    description:
+      'Get read-only quality check IDs and details for one Weblate translation unit. Details are reported as unavailable when the Weblate UI cannot be read.',
+    parameters: translationScopeSchema.extend({
+      unitId: z.string().trim().min(1).describe('Weblate translation unit ID'),
+    }),
+  })
+  async getUnitChecks({
+    projectSlug,
+    componentSlug,
+    languageCode,
+    unitId,
+  }: {
+    projectSlug: string;
+    componentSlug: string;
+    languageCode: string;
+    unitId: string;
+  }) {
+    return this.execute('get unit checks', async () => {
+      const checks = await this.weblateApiService.getUnitChecks(
+        projectSlug,
+        componentSlug,
+        languageCode,
+        unitId,
+      );
+      return this.jsonResult(`Quality checks for unit ${unitId}`, checks);
+    });
+  }
+
+  @Tool({
     name: 'getUnitComments',
     description:
       'Get read-only comments attached to a Weblate translation unit',

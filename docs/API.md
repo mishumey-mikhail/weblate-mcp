@@ -318,10 +318,29 @@ All tools in this section are read-only.
 ### Unit context
 
 - `getUnitDetails` — complete unit data by `unitId`.
+- `getUnitChecks` — failing quality-check IDs and read-only names/descriptions for one unit; reports UI/API limitations explicitly.
 - `getUnitComments` — comments by `unitId`, with `page` and `pageSize`.
 - `getUnitHistory` — changes for a unit within `projectSlug`, `componentSlug`, and `languageCode`.
 - `getUnitScreenshots` — screenshots associated with a unit, including image URLs.
 - `listTranslationUnits` — paginated units for an exact project/component/language scope.
+
+### `getUnitChecks`
+
+Get read-only quality-check information for one translation unit. The tool
+uses the unit API, Weblate's check search, and the read-only Weblate UI page
+because the REST unit representation exposes `has_failing_check` but not the
+individual check descriptions.
+
+**Parameters:**
+- `projectSlug` (string, required)
+- `componentSlug` (string, required)
+- `languageCode` (string, required)
+- `unitId` (string, required)
+
+**Returns:** `unitId`, requested scope, `hasFailingCheck`, discovered check IDs,
+parsed check metadata, `detailsAvailable`, and `limitations`. If the Weblate
+UI cannot be read, the tool returns a controlled limitation instead of
+inventing check details.
 
 ### Project and translation context
 
