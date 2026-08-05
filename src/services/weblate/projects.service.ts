@@ -1,6 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { WeblateClientService } from '../weblate-client.service';
-import { projectsList, projectsRetrieve, type Project } from '../../client';
+import {
+  projectsLabelsRetrieve,
+  projectsList,
+  projectsRetrieve,
+  type Project,
+  type UnitFlatLabels,
+} from '../../client';
+
+export type ProjectLabel = UnitFlatLabels;
 
 @Injectable()
 export class WeblateProjectsService {
@@ -36,9 +44,9 @@ export class WeblateProjectsService {
   async getProject(projectSlug: string): Promise<Project> {
     try {
       const client = this.weblateClientService.getClient();
-      const response = await projectsRetrieve({ 
+      const response = await projectsRetrieve({
         client,
-        path: { slug: projectSlug }
+        path: { slug: projectSlug },
       });
       return response.data;
     } catch (error) {
@@ -46,4 +54,29 @@ export class WeblateProjectsService {
       throw new Error(`Failed to get project ${projectSlug}: ${error.message}`);
     }
   }
-} 
+
+  async listProjectLabels(projectSlug: string): Promise<ProjectLabel[]> {
+    try {
+      const client = this.weblateClientService.getClient();
+      const response = await projectsLabelsRetrieve({
+        client,
+        path: { slug: projectSlug },
+      });
+      const payload = response.data as unknown;
+      const labels = Array.isArray(payload)
+        ? payload
+        : (payload as { results?: unknown } | null)?.results;
+
+      return Array.isArray(labels) ? (labels as ProjectLabel[]) : [];
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Не удалось получить метки проекта ${projectSlug}`,
+        error,
+      );
+      throw new Error(
+        `Не удалось получить метки проекта ${projectSlug}: ${message}`,
+      );
+    }
+  }
+}

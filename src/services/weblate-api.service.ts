@@ -7,6 +7,8 @@ import {
   WeblateChangesService,
   WeblateMemoryService,
   WeblateReadonlyService,
+  type AssignLabelToUnitResult,
+  type ProjectLabel,
 } from './weblate';
 import {
   type Project,
@@ -46,6 +48,35 @@ export class WeblateApiService {
 
   async getProject(projectSlug: string): Promise<Project> {
     return this.projectsService.getProject(projectSlug);
+  }
+
+  async listProjectLabels(projectSlug: string): Promise<ProjectLabel[]> {
+    return this.projectsService.listProjectLabels(projectSlug);
+  }
+
+  async assignLabelToUnit(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    key: string,
+    labelId: number,
+  ): Promise<AssignLabelToUnitResult> {
+    const labels = await this.projectsService.listProjectLabels(projectSlug);
+    const label = labels.find(({ id }) => id === labelId);
+
+    if (!label) {
+      throw new Error(
+        `Метка с ID ${labelId} не найдена в проекте ${projectSlug}`,
+      );
+    }
+
+    return this.translationsService.assignLabelToUnit(
+      projectSlug,
+      componentSlug,
+      languageCode,
+      key,
+      label,
+    );
   }
 
   // Component methods

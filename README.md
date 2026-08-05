@@ -135,6 +135,8 @@ For development or local builds:
 | Tool | Description |
 |------|-------------|
 | **`listProjects`** | List all available Weblate projects with URLs and metadata |
+| **`listProjectLabels`** | List project labels with IDs, descriptions, and colors |
+| **`assignLabelToUnit`** *(write, opt-in)* | Change a translation unit by assigning an existing project label; enable explicitly in `prompt.config` |
 
 ### 🔧 Component Management
 | Tool | Description |

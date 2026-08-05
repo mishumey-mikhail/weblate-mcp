@@ -103,6 +103,7 @@ This guide shows you how to configure and use the Weblate MCP (Model Context Pro
 Once configured, you'll have access to these translation management tools:
 
 - **listProjects** - List all available Weblate projects
+- **listProjectLabels** - List labels available in a specific Weblate project
 - **listComponents** - List components in a specific project
 - **listLanguages** - List languages available in a project
 - **searchUnitsWithFilters** ⭐ - **Efficient search using Weblate's native filtering syntax**
@@ -110,6 +111,7 @@ Once configured, you'll have access to these translation management tools:
 - **searchStringInProject** - Search for translations containing specific text
 - **getTranslationForKey** - Get translation value for a specific key
 - **writeTranslation** - Write or update a translation value
+- **assignLabelToUnit** - **Write action:** assign an existing project label to a translation unit; enable explicitly in `prompt.config`
 - **bulkWriteTranslations** ⚡ - **Batch update multiple translations efficiently**
 - **findTranslationsForKey** - Find all translations for a specific key
 - **lookupTranslationMemory** - Find read-only translation memory matches for source strings

@@ -1,11 +1,16 @@
-import { unitsList } from '../../client';
+import { unitsList, unitsPartialUpdate, type Unit } from '../../client';
 import { WeblateTranslationsService } from './translations.service';
 
 jest.mock('../../client', () => ({
   unitsList: jest.fn(),
+  unitsPartialUpdate: jest.fn(),
 }));
 
 describe('WeblateTranslationsService', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('uses the public slug in filtered searches for nested components', async () => {
     const list = unitsList as jest.Mock;
     list.mockResolvedValue({ data: { results: [{ id: 1 }] } });
@@ -102,6 +107,96 @@ describe('WeblateTranslationsService', () => {
           page_size: 10,
         },
       }),
+    );
+  });
+
+  it('assigns an existing label and preserves current labels', async () => {
+    const update = unitsPartialUpdate as jest.Mock;
+    const service = new WeblateTranslationsService({
+      getClient: jest.fn(() => ({})),
+    } as never);
+    const unit = {
+      id: 42,
+      labels: [{ id: 1, name: 'Existing', description: 'Already assigned' }],
+    } as Unit;
+    jest.spyOn(service, 'getTranslationByKey').mockResolvedValue(unit);
+    update.mockResolvedValue({
+      data: {
+        labels: [
+          ...unit.labels,
+          { id: 7, name: 'Needs review', color: 'orange' },
+        ],
+      },
+    });
+
+    await expect(
+      service.assignLabelToUnit('demo', 'web', 'ru', 'homepage.title', {
+        id: 7,
+        name: 'Needs review',
+        color: 'orange',
+      }),
+    ).resolves.toMatchObject({
+      projectSlug: 'demo',
+      componentSlug: 'web',
+      languageCode: 'ru',
+      key: 'homepage.title',
+      assignedLabel: { id: 7, name: 'Needs review', color: 'orange' },
+      labels: [
+        { id: 1, name: 'Existing', description: 'Already assigned' },
+        { id: 7, name: 'Needs review', color: 'orange' },
+      ],
+    });
+    expect(update).toHaveBeenCalledWith({
+      client: expect.anything(),
+      path: { id: '42' },
+      body: {
+        labels: [
+          { id: 1, name: 'Existing', description: 'Already assigned' },
+          { id: 7, name: 'Needs review', color: 'orange' },
+        ],
+      },
+    });
+  });
+
+  it('does not update when the translation unit is missing', async () => {
+    const update = unitsPartialUpdate as jest.Mock;
+    const service = new WeblateTranslationsService({
+      getClient: jest.fn(() => ({})),
+    } as never);
+    jest.spyOn(service, 'getTranslationByKey').mockResolvedValue(null);
+
+    await expect(
+      service.assignLabelToUnit('demo', 'web', 'ru', 'missing.key', {
+        id: 7,
+        name: 'Needs review',
+      }),
+    ).rejects.toThrow('Юнит перевода с ключом "missing.key" не найден');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('does not duplicate a label already assigned to the unit', async () => {
+    const update = unitsPartialUpdate as jest.Mock;
+    const service = new WeblateTranslationsService({
+      getClient: jest.fn(() => ({})),
+    } as never);
+    const label = { id: 7, name: 'Needs review', color: 'orange' as const };
+    jest.spyOn(service, 'getTranslationByKey').mockResolvedValue({
+      id: 42,
+      labels: [label],
+    } as Unit);
+    update.mockResolvedValue({ data: { labels: [label] } });
+
+    const result = await service.assignLabelToUnit(
+      'demo',
+      'web',
+      'ru',
+      'homepage.title',
+      label,
+    );
+
+    expect(result.labels).toEqual([label]);
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ body: { labels: [label] } }),
     );
   });
 });

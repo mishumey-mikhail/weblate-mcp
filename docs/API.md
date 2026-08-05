@@ -72,6 +72,87 @@ Get detailed information about a specific project.
 }
 ```
 
+### `listProjectLabels`
+
+List the labels available in a Weblate project. This is a read-only operation.
+
+**Parameters:**
+- `projectSlug` (string, required): Project slug identifier
+
+**Returns:** JSON text containing the project slug and labels with `id`, `name`, `description`, and `color`.
+
+**Example:**
+```json
+{
+  "name": "listProjectLabels",
+  "arguments": {
+    "projectSlug": "myproject"
+  }
+}
+```
+
+**Example response:**
+```json
+{
+  "projectSlug": "myproject",
+  "labels": [
+    {
+      "id": 7,
+      "name": "Needs review",
+      "description": "Requires translator review",
+      "color": "orange"
+    }
+  ]
+}
+```
+
+### `assignLabelToUnit`
+
+**Write action:** assign an existing project label to a translation unit. This changes Weblate data and should be enabled explicitly in `prompt.config`; the tool does not create labels.
+
+**Parameters:**
+- `projectSlug` (string, required): Project slug identifier
+- `componentSlug` (string, required): Component slug identifier
+- `languageCode` (string, required): Translation language code
+- `key` (string, required): Translation unit key/context
+- `labelId` (number, required): ID of an existing label belonging to the project
+
+**Returns:** JSON text with the unit scope, assigned label, and final label list.
+
+**Example:**
+```json
+{
+  "name": "assignLabelToUnit",
+  "arguments": {
+    "projectSlug": "myproject",
+    "componentSlug": "web",
+    "languageCode": "ru",
+    "key": "homepage.title",
+    "labelId": 7
+  }
+}
+```
+
+**Example response:**
+```json
+{
+  "projectSlug": "myproject",
+  "componentSlug": "web",
+  "languageCode": "ru",
+  "key": "homepage.title",
+  "assignedLabel": {
+    "id": 7,
+    "name": "Needs review"
+  },
+  "labels": [
+    {
+      "id": 7,
+      "name": "Needs review"
+    }
+  ]
+}
+```
+
 ### `create_project`
 
 Create a new project in Weblate.

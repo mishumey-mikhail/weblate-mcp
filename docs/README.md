@@ -66,7 +66,11 @@ The MCP server provides comprehensive tools for interacting with Weblate:
 
 ### Project Management
 - `listProjects` - List all available Weblate projects
+- `listProjectLabels` - List labels available in a specific Weblate project
 - Comprehensive project information with URLs and metadata
+
+Optional write tool:
+- `assignLabelToUnit` - **Changes data** by assigning an existing project label to a translation unit; enable explicitly in `prompt.config`
 
 ### Component Management
 - `listComponents` - List components in a specific project

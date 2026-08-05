@@ -1,7 +1,28 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { WeblateClientService } from '../weblate-client.service';
-import { unitsList, unitsPartialUpdate, translationsUnitsRetrieve, type Unit, type PaginatedUnitList, type UnitsListData, type TranslationsUnitsRetrieveData } from '../../client';
+import { unitsList, unitsPartialUpdate, translationsUnitsRetrieve, type Unit, type UnitFlatLabels, type PaginatedUnitList, type UnitsListData, type TranslationsUnitsRetrieveData } from '../../client';
 import { SearchIn } from '../../types';
+
+export type AssignLabelToUnitResult = {
+  projectSlug: string;
+  componentSlug: string;
+  languageCode: string;
+  key: string;
+  assignedLabel: UnitFlatLabels;
+  labels: UnitFlatLabels[];
+};
+
+function mergeUnitLabels(
+  currentLabels: readonly UnitFlatLabels[],
+  label: UnitFlatLabels,
+): UnitFlatLabels[] {
+  const labelsById = new Map<number, UnitFlatLabels>();
+  for (const currentLabel of currentLabels) {
+    labelsById.set(currentLabel.id, currentLabel);
+  }
+  labelsById.set(label.id, label);
+  return [...labelsById.values()];
+}
 
 function searchValue(value: string): string {
   return /\s/.test(value)
@@ -207,6 +228,67 @@ export class WeblateTranslationsService {
       this.logger.error(`Failed to write translation for key ${key}`, error);
       throw new Error(
         `Failed to write translation for key ${key}: ${error.message}`,
+      );
+    }
+  }
+
+  async assignLabelToUnit(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    key: string,
+    label: UnitFlatLabels,
+  ): Promise<AssignLabelToUnitResult> {
+    try {
+      const unit = await this.getTranslationByKey(
+        projectSlug,
+        componentSlug,
+        languageCode,
+        key,
+      );
+
+      if (!unit || !unit.id) {
+        throw new Error(
+          `Юнит перевода с ключом "${key}" не найден в ${projectSlug}/${componentSlug}/${languageCode}`,
+        );
+      }
+
+      const labels = mergeUnitLabels(unit.labels ?? [], label);
+      const client = this.weblateClientService.getClient();
+      const response = await unitsPartialUpdate({
+        client,
+        path: { id: unit.id.toString() },
+        body: { labels },
+      });
+
+      if (response.error) {
+        throw new Error(
+          `Ошибка API Weblate: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const responseLabels = (response.data as { labels?: unknown } | null)
+        ?.labels;
+      const finalLabels = Array.isArray(responseLabels)
+        ? mergeUnitLabels(responseLabels as UnitFlatLabels[], label)
+        : labels;
+
+      return {
+        projectSlug,
+        componentSlug,
+        languageCode,
+        key,
+        assignedLabel: label,
+        labels: finalLabels,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Не удалось назначить метку юниту с ключом "${key}"`,
+        error,
+      );
+      throw new Error(
+        `Не удалось назначить метку юниту с ключом "${key}": ${message}`,
       );
     }
   }

@@ -22,6 +22,7 @@ import {
   WeblateStatisticsTool,
   WeblateMemoryTool,
   WeblateReadonlyTool,
+  WeblateLabelsTool,
 } from './tools';
 import { randomUUID } from 'crypto';
 
@@ -40,6 +41,7 @@ import { randomUUID } from 'crypto';
 Available tools:
 Translation Management:
 - listProjects: List all available Weblate projects
+- listProjectLabels: Список доступных меток указанного проекта Weblate
 - listComponents: List components in a specific project
 - listLanguages: List languages available in a specific project
 - searchStringInProject: Search for translations containing specific text
@@ -97,6 +99,7 @@ Translation Statistics Dashboard:
     WeblateMemoryService,
     WeblateReadonlyService,
     WeblateProjectsTool,
+    WeblateLabelsTool,
     WeblateComponentsTool,
     WeblateLanguagesTool,
     WeblateTranslationsTool,
