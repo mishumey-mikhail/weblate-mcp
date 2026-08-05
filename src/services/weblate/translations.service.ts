@@ -8,6 +8,7 @@ export type AssignLabelToUnitResult = {
   componentSlug: string;
   languageCode: string;
   key: string;
+  explanation: string;
   assignedLabel: UnitFlatLabels;
   labels: UnitFlatLabels[];
 };
@@ -238,6 +239,7 @@ export class WeblateTranslationsService {
     languageCode: string,
     key: string,
     label: UnitFlatLabels,
+    explanation: string,
   ): Promise<AssignLabelToUnitResult> {
     try {
       const unit = await this.getTranslationByKey(
@@ -258,7 +260,7 @@ export class WeblateTranslationsService {
       const response = await unitsPartialUpdate({
         client,
         path: { id: unit.id.toString() },
-        body: { labels },
+        body: { labels, explanation },
       });
 
       if (response.error) {
@@ -267,17 +269,25 @@ export class WeblateTranslationsService {
         );
       }
 
-      const responseLabels = (response.data as { labels?: unknown } | null)
-        ?.labels;
+      const responseData = response.data as {
+        labels?: unknown;
+        explanation?: unknown;
+      } | null;
+      const responseLabels = responseData?.labels;
       const finalLabels = Array.isArray(responseLabels)
         ? mergeUnitLabels(responseLabels as UnitFlatLabels[], label)
         : labels;
+      const finalExplanation =
+        typeof responseData?.explanation === 'string'
+          ? responseData.explanation
+          : explanation;
 
       return {
         projectSlug,
         componentSlug,
         languageCode,
         key,
+        explanation: finalExplanation,
         assignedLabel: label,
         labels: finalLabels,
       };

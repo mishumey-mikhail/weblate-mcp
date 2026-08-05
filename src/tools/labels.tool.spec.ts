@@ -59,6 +59,7 @@ describe('WeblateLabelsTool', () => {
         componentSlug: 'web',
         languageCode: 'ru',
         key: 'homepage.title',
+        explanation: 'Review this translation',
         assignedLabel: { id: 7, name: 'Needs review' },
         labels: [
           { id: 1, name: 'Existing' },
@@ -74,6 +75,7 @@ describe('WeblateLabelsTool', () => {
       languageCode: 'ru',
       key: 'homepage.title',
       labelId: 7,
+      explanation: 'Review this translation',
     });
 
     expect(service.assignLabelToUnit).toHaveBeenCalledWith(
@@ -82,6 +84,7 @@ describe('WeblateLabelsTool', () => {
       'ru',
       'homepage.title',
       7,
+      'Review this translation',
     );
     const content = result.content[0];
     expect(content.type).toBe('text');
@@ -90,7 +93,32 @@ describe('WeblateLabelsTool', () => {
     }
     expect(JSON.parse(content.text)).toMatchObject({
       projectSlug: 'demo',
+      explanation: 'Review this translation',
       assignedLabel: { id: 7, name: 'Needs review' },
     });
+  });
+
+  it('returns a validation error when explanation is absent', async () => {
+    const service = {
+      assignLabelToUnit: jest.fn(),
+    };
+    const tool = new WeblateLabelsTool(service as never);
+
+    const result = await tool.assignLabelToUnit({
+      projectSlug: 'demo',
+      componentSlug: 'web',
+      languageCode: 'ru',
+      key: 'homepage.title',
+      labelId: 7,
+    } as never);
+
+    expect(result.isError).toBe(true);
+    expect(service.assignLabelToUnit).not.toHaveBeenCalled();
+    const content = result.content[0];
+    expect(content.type).toBe('text');
+    if (content.type !== 'text') {
+      throw new Error('Ожидался текстовый MCP-результат');
+    }
+    expect(content.text).toContain('Укажите explanation');
   });
 });

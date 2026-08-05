@@ -111,7 +111,7 @@ Once configured, you'll have access to these translation management tools:
 - **searchStringInProject** - Search for translations containing specific text
 - **getTranslationForKey** - Get translation value for a specific key
 - **writeTranslation** - Write or update a translation value
-- **assignLabelToUnit** - **Write action:** assign an existing project label to a translation unit; enable explicitly in `prompt.config`
+- **assignLabelToUnit** - **Write action:** assign an existing project label and save an explanation on a translation unit; enable explicitly in `prompt.config`
 - **bulkWriteTranslations** ⚡ - **Batch update multiple translations efficiently**
 - **findTranslationsForKey** - Find all translations for a specific key
 - **lookupTranslationMemory** - Find read-only translation memory matches for source strings

@@ -21,7 +21,14 @@ describe('WeblateApiService label assignment', () => {
     );
 
     await expect(
-      service.assignLabelToUnit('demo', 'web', 'ru', 'homepage.title', 99),
+      service.assignLabelToUnit(
+        'demo',
+        'web',
+        'ru',
+        'homepage.title',
+        99,
+        'Review this translation',
+      ),
     ).rejects.toThrow('Метка с ID 99 не найдена в проекте demo');
     expect(translationsService.assignLabelToUnit).not.toHaveBeenCalled();
   });

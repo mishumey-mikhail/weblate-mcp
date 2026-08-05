@@ -130,16 +130,24 @@ describe('WeblateTranslationsService', () => {
     });
 
     await expect(
-      service.assignLabelToUnit('demo', 'web', 'ru', 'homepage.title', {
-        id: 7,
-        name: 'Needs review',
-        color: 'orange',
-      }),
+      service.assignLabelToUnit(
+        'demo',
+        'web',
+        'ru',
+        'homepage.title',
+        {
+          id: 7,
+          name: 'Needs review',
+          color: 'orange',
+        },
+        'Review this translation',
+      ),
     ).resolves.toMatchObject({
       projectSlug: 'demo',
       componentSlug: 'web',
       languageCode: 'ru',
       key: 'homepage.title',
+      explanation: 'Review this translation',
       assignedLabel: { id: 7, name: 'Needs review', color: 'orange' },
       labels: [
         { id: 1, name: 'Existing', description: 'Already assigned' },
@@ -154,6 +162,7 @@ describe('WeblateTranslationsService', () => {
           { id: 1, name: 'Existing', description: 'Already assigned' },
           { id: 7, name: 'Needs review', color: 'orange' },
         ],
+        explanation: 'Review this translation',
       },
     });
   });
@@ -166,10 +175,17 @@ describe('WeblateTranslationsService', () => {
     jest.spyOn(service, 'getTranslationByKey').mockResolvedValue(null);
 
     await expect(
-      service.assignLabelToUnit('demo', 'web', 'ru', 'missing.key', {
-        id: 7,
-        name: 'Needs review',
-      }),
+      service.assignLabelToUnit(
+        'demo',
+        'web',
+        'ru',
+        'missing.key',
+        {
+          id: 7,
+          name: 'Needs review',
+        },
+        'Missing unit test',
+      ),
     ).rejects.toThrow('Юнит перевода с ключом "missing.key" не найден');
     expect(update).not.toHaveBeenCalled();
   });
@@ -192,11 +208,14 @@ describe('WeblateTranslationsService', () => {
       'ru',
       'homepage.title',
       label,
+      'Already assigned',
     );
 
     expect(result.labels).toEqual([label]);
     expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ body: { labels: [label] } }),
+      expect.objectContaining({
+        body: { labels: [label], explanation: 'Already assigned' },
+      }),
     );
   });
 });

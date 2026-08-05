@@ -60,6 +60,7 @@ export class WeblateApiService {
     languageCode: string,
     key: string,
     labelId: number,
+    explanation: string,
   ): Promise<AssignLabelToUnitResult> {
     const labels = await this.projectsService.listProjectLabels(projectSlug);
     const label = labels.find(({ id }) => id === labelId);
@@ -76,6 +77,7 @@ export class WeblateApiService {
       languageCode,
       key,
       label,
+      explanation,
     );
   }
 
