@@ -151,7 +151,10 @@ describe('WeblateTranslationsService', () => {
     expect(update).toHaveBeenCalledWith({
       client: expect.anything(),
       path: { id: '42' },
-      body: { state: 20 },
+      body: {
+        state: 20,
+        target: ['Existing translation'],
+      },
     });
   });
 

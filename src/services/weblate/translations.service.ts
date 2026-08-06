@@ -297,7 +297,10 @@ export class WeblateTranslationsService {
       const response = await unitsPartialUpdate({
         client,
         path: { id: unit.id.toString() },
-        body: { state },
+        body: {
+          state,
+          target: unit.target ?? [],
+        },
       });
 
       if (response.error) {
