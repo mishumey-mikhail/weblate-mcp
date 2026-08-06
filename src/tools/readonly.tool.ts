@@ -36,7 +36,7 @@ export class WeblateReadonlyTool {
   @Tool({
     name: 'getUnitDetails',
     description:
-      'Get complete read-only details for a Weblate translation unit',
+      'Get complete read-only details for a Weblate translation unit. For translated units, labels are stored on the source unit; the response includes effective_labels, source_unit_id, source_unit_labels, and labels_owner.',
     parameters: z.object({
       unitId: z.string().trim().min(1).describe('Weblate translation unit ID'),
     }),

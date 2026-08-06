@@ -188,6 +188,17 @@ describe('WeblateTranslationsService', () => {
           ...unit.labels,
           { id: 7, name: 'Needs review', color: 'orange' },
         ],
+        explanation: 'Review this translation',
+      },
+    });
+    (unitsRetrieve as jest.Mock).mockResolvedValue({
+      data: {
+        id: 42,
+        labels: [
+          ...unit.labels,
+          { id: 7, name: 'Needs review', color: 'orange' },
+        ],
+        explanation: 'Review this translation',
       },
     });
 
@@ -260,6 +271,9 @@ describe('WeblateTranslationsService', () => {
       labels: [label],
     } as Unit);
     update.mockResolvedValue({ data: { labels: [label] } });
+    (unitsRetrieve as jest.Mock).mockResolvedValue({
+      data: { id: 42, labels: [label], explanation: 'Already assigned' },
+    });
 
     const result = await service.assignLabelToUnit(
       'demo',
@@ -297,7 +311,13 @@ describe('WeblateTranslationsService', () => {
       labels: [],
       source_unit: 'https://weblate.test/api/units/24/',
     } as Unit);
-    retrieve.mockResolvedValue({ data: sourceUnit });
+    retrieve.mockResolvedValueOnce({ data: sourceUnit }).mockResolvedValueOnce({
+      data: {
+        ...sourceUnit,
+        labels: [...sourceUnit.labels, label],
+        explanation: 'Existing source context\n\nNew explanation',
+      },
+    });
     update.mockResolvedValue({
       data: {
         labels: [1, 7],

@@ -12,10 +12,20 @@ import {
   type WeblateScreenshot,
   type WeblateUnitCheck,
   type WeblateUnitChecksResult,
+  type WeblateUnitDetails,
 } from '../../types';
 
 interface ParsedUnitCheck extends WeblateUnitCheck {
   documentationId: string | null;
+}
+
+function extractUnitId(unitUrl: string | undefined): string | null {
+  if (!unitUrl) {
+    return null;
+  }
+
+  const match = unitUrl.match(/\/units\/(\d+)\/?$/);
+  return match?.[1] ?? null;
 }
 
 @Injectable()
@@ -28,8 +38,57 @@ export class WeblateReadonlyService extends BaseWeblateService {
     super(configService);
   }
 
-  async getUnitDetails(unitId: string): Promise<Unit> {
-    return this.get<Unit>(`/units/${encodeURIComponent(unitId)}/`);
+  async getUnitDetails(unitId: string): Promise<WeblateUnitDetails> {
+    const unit = await this.get<Unit>(`/units/${encodeURIComponent(unitId)}/`);
+    const unitLabels = unit.labels ?? [];
+    const sourceUnitId = extractUnitId(unit.source_unit);
+
+    if (!sourceUnitId || sourceUnitId === String(unit.id)) {
+      return {
+        ...unit,
+        labels: unitLabels,
+        unit_labels: unitLabels,
+        source_unit_id: null,
+        source_unit_labels: [],
+        effective_labels: unitLabels,
+        labels_owner: 'requested_unit',
+      };
+    }
+
+    try {
+      const sourceUnit = await this.get<Unit>(
+        `/units/${encodeURIComponent(sourceUnitId)}/`,
+      );
+      const sourceLabels = sourceUnit.labels ?? [];
+
+      return {
+        ...unit,
+        // Weblate exposes labels on source units only. Keep labels aligned
+        // with the user-visible translation while preserving the raw fields.
+        labels: sourceLabels,
+        unit_labels: unitLabels,
+        source_unit_id: sourceUnitId,
+        source_unit_labels: sourceLabels,
+        effective_labels: sourceLabels,
+        labels_owner: 'source_unit',
+        source_unit_explanation: sourceUnit.explanation ?? null,
+      };
+    } catch (error) {
+      const message = this.errorMessage(error);
+      this.logger.warn(
+        `Не удалось получить labels source-unit ${sourceUnitId} для юнита ${unitId}: ${message}`,
+      );
+      return {
+        ...unit,
+        labels: unitLabels,
+        unit_labels: unitLabels,
+        source_unit_id: sourceUnitId,
+        source_unit_labels: [],
+        effective_labels: unitLabels,
+        labels_owner: 'unresolved',
+        labels_resolution_error: message,
+      };
+    }
   }
 
   async getUnitChecks(
@@ -59,9 +118,7 @@ export class WeblateReadonlyService extends BaseWeblateService {
 
     let checksIndexHtml: string;
     try {
-      checksIndexHtml = await this.getWebPage(
-        `/checks/-/${translationPath}/`,
-      );
+      checksIndexHtml = await this.getWebPage(`/checks/-/${translationPath}/`);
     } catch (error) {
       result.limitations.push(
         `Не удалось получить read-only страницу списка checks: ${this.errorMessage(error)}`,
@@ -94,7 +151,9 @@ export class WeblateReadonlyService extends BaseWeblateService {
     );
     const matchingCheckIds = checkMatches
       .filter(
-        (match): match is PromiseFulfilledResult<{
+        (
+          match,
+        ): match is PromiseFulfilledResult<{
           checkId: string;
           units: Unit[];
         }> => match.status === 'fulfilled',

@@ -125,11 +125,22 @@ export class WeblateTranslationsTool {
         };
       }
 
+      let displayTranslation = translation;
+      try {
+        displayTranslation = await this.weblateApiService.getUnitDetails(
+          String(translation.id),
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Не удалось разрешить effective labels для ключа ${key}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+
       return {
         content: [
           {
             type: 'text',
-            text: this.formatTranslationResult(translation),
+            text: this.formatTranslationResult(displayTranslation),
           },
         ],
       };
@@ -632,6 +643,18 @@ export class WeblateTranslationsTool {
 
   private formatTranslationResult(translation: Unit): string {
     const status = this.formatStateLabel(translation.state, translation);
+    const details = translation as Unit & {
+      effective_labels?: Array<{ id: number; name: string }>;
+      labels_owner?: string;
+      source_unit_id?: string | null;
+    };
+    const labels = details.effective_labels ?? translation.labels ?? [];
+    const labelsText = labels.length
+      ? labels.map(({ id, name }) => `${name} (ID ${id})`).join(', ')
+      : 'нет';
+    const labelsSource = details.labels_owner
+      ? `\n**Источник labels:** ${details.labels_owner}${details.source_unit_id ? ` (ID ${details.source_unit_id})` : ''}`
+      : '';
 
     const sourceText =
       translation.source && Array.isArray(translation.source)
@@ -648,6 +671,7 @@ export class WeblateTranslationsTool {
 **Target:** ${targetText}
 **Status:** ${status}
 **State:** ${translation.state ?? '(unknown)'}
+**Labels:** ${labelsText}${labelsSource}
 **Context:** ${translation.context || '(none)'}
 **Note:** ${translation.note || '(none)'}
 **ID:** ${translation.id}`;

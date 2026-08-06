@@ -1,3 +1,5 @@
+import { type Unit, type UnitLabels } from '../client';
+
 export interface WeblateProject {
   id: number;
   slug: string;
@@ -229,6 +231,23 @@ export interface WeblateUnitChecksResult {
   checks: WeblateUnitCheck[];
   detailsAvailable: boolean;
   limitations: string[];
+}
+
+export interface WeblateUnitDetails extends Unit {
+  /** Labels, attached directly to the requested unit in Weblate. */
+  unit_labels: UnitLabels[];
+  /** ID of the source unit when the requested unit is a translation unit. */
+  source_unit_id: string | null;
+  /** Labels, attached to the source unit in Weblate. */
+  source_unit_labels: UnitLabels[];
+  /** Labels that apply to the requested translation from the user perspective. */
+  effective_labels: UnitLabels[];
+  /** Unit that owns the effective labels. */
+  labels_owner: 'requested_unit' | 'source_unit' | 'unresolved';
+  /** Error while resolving source labels, if any. */
+  labels_resolution_error?: string;
+  /** Explanation stored on the source unit, when available. */
+  source_unit_explanation?: string | null;
 }
 
 export interface WeblateRepositoryStatus {

@@ -20,6 +20,40 @@ describe('WeblateReadonlyService', () => {
       } as never,
     );
 
+  it('resolves effective labels from the source unit', async () => {
+    const service = createService();
+    const apiClient = (service as unknown as { apiClient: AxiosInstance })
+      .apiClient;
+    const get = jest.spyOn(apiClient, 'get');
+    get
+      .mockResolvedValueOnce({
+        data: {
+          id: 42,
+          source_unit: 'https://weblate.test/api/units/24/',
+          labels: [],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          id: 24,
+          labels: [{ id: 7, name: 'Точность: Пропуск' }],
+          explanation: 'MQM: Точность: Пропуск. Причина: пропущен текст.',
+        },
+      });
+
+    await expect(service.getUnitDetails('42')).resolves.toMatchObject({
+      id: 42,
+      labels: [{ id: 7, name: 'Точность: Пропуск' }],
+      unit_labels: [],
+      source_unit_id: '24',
+      source_unit_labels: [{ id: 7, name: 'Точность: Пропуск' }],
+      effective_labels: [{ id: 7, name: 'Точность: Пропуск' }],
+      labels_owner: 'source_unit',
+      source_unit_explanation:
+        'MQM: Точность: Пропуск. Причина: пропущен текст.',
+    });
+  });
+
   it('reads unit comments with pagination', async () => {
     const service = createService();
     const apiClient = (service as unknown as { apiClient: AxiosInstance })
@@ -162,16 +196,18 @@ describe('WeblateReadonlyService', () => {
   });
 
   it('uses the encoded API slug for nested component details', async () => {
-    const resolveComponentApiSlug = jest.fn().mockResolvedValue(
-      'publichnye-stranicy%2Fglavnaya-stranica',
-    );
+    const resolveComponentApiSlug = jest
+      .fn()
+      .mockResolvedValue('publichnye-stranicy%2Fglavnaya-stranica');
     const service = new WeblateReadonlyService(
       new ConfigService({
         WEBLATE_API_URL: 'http://weblate.test',
         WEBLATE_API_TOKEN: 'test-token',
       }),
       { resolveComponentApiSlug } as never,
-      { searchUnitsWithFailingChecks: jest.fn().mockResolvedValue([]) } as never,
+      {
+        searchUnitsWithFailingChecks: jest.fn().mockResolvedValue([]),
+      } as never,
     );
     const apiClient = (service as unknown as { apiClient: AxiosInstance })
       .apiClient;
@@ -238,19 +274,23 @@ describe('WeblateReadonlyService', () => {
         },
       ],
     });
-    expect(translationsService.searchUnitsWithFailingChecks).toHaveBeenCalledWith(
-      'web',
-      'glavnaya-stranica',
-      'en',
-      'same',
-      200,
+    expect(
+      translationsService.searchUnitsWithFailingChecks,
+    ).toHaveBeenCalledWith('web', 'glavnaya-stranica', 'en', 'same', 200);
+    expect(webGet).toHaveBeenNthCalledWith(
+      1,
+      '/checks/-/web/glavnaya-stranica/en/',
+      {
+        headers: { Accept: 'text/html' },
+      },
     );
-    expect(webGet).toHaveBeenNthCalledWith(1, '/checks/-/web/glavnaya-stranica/en/', {
-      headers: { Accept: 'text/html' },
-    });
-    expect(webGet).toHaveBeenNthCalledWith(2, '/translate/web/glavnaya-stranica/en/?checksum=abc', {
-      headers: { Accept: 'text/html' },
-    });
+    expect(webGet).toHaveBeenNthCalledWith(
+      2,
+      '/translate/web/glavnaya-stranica/en/?checksum=abc',
+      {
+        headers: { Accept: 'text/html' },
+      },
+    );
   });
 
   it('returns a controlled limitation when the Weblate UI is unavailable', async () => {
@@ -261,12 +301,15 @@ describe('WeblateReadonlyService', () => {
       data: {
         id: 42,
         has_failing_check: true,
-        web_url: 'https://weblate.test/translate/web/component/en/?checksum=abc',
+        web_url:
+          'https://weblate.test/translate/web/component/en/?checksum=abc',
       },
     });
     const webClient = (service as unknown as { webClient: AxiosInstance })
       .webClient;
-    jest.spyOn(webClient, 'get').mockRejectedValue(new Error('503 unavailable'));
+    jest
+      .spyOn(webClient, 'get')
+      .mockRejectedValue(new Error('503 unavailable'));
 
     await expect(
       service.getUnitChecks('web', 'component', 'en', '42'),
@@ -274,9 +317,7 @@ describe('WeblateReadonlyService', () => {
       hasFailingCheck: true,
       checks: [],
       detailsAvailable: false,
-      limitations: [
-        expect.stringContaining('503 unavailable'),
-      ],
+      limitations: [expect.stringContaining('503 unavailable')],
     });
   });
 });

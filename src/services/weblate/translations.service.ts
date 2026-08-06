@@ -31,9 +31,15 @@ export type AssignLabelToUnitResult = {
   componentSlug: string;
   languageCode: string;
   key: string;
+  requestedUnitId: string;
+  updatedUnitId: string;
+  sourceUnitId: string | null;
+  labelsOwner: 'requested_unit' | 'source_unit';
   explanation: string;
   assignedLabel: UnitFlatLabels;
   labels: UnitFlatLabels[];
+  verified: boolean;
+  verificationError?: string;
 };
 
 function mergeUnitLabels(
@@ -441,19 +447,53 @@ export class WeblateTranslationsService {
         labels?: unknown;
         explanation?: unknown;
       } | null;
-      const finalExplanation =
+      const responseExplanation =
         typeof responseData?.explanation === 'string'
           ? responseData.explanation
           : explanationToSave;
+      let finalLabels = labels;
+      let finalExplanation = responseExplanation;
+      let verified = false;
+      let verificationError: string | undefined;
+
+      try {
+        const verificationResponse = await unitsRetrieve({
+          client,
+          path: { id: updateUnit.id.toString() },
+        });
+
+        if (verificationResponse.error || !verificationResponse.data) {
+          throw new Error(
+            `API error: ${JSON.stringify(verificationResponse.error)}`,
+          );
+        }
+
+        const verifiedUnit = verificationResponse.data as Unit;
+        finalLabels = verifiedUnit.labels ?? [];
+        finalExplanation = verifiedUnit.explanation ?? responseExplanation;
+        verified = finalLabels.some(({ id }) => id === label.id);
+      } catch (error) {
+        verificationError =
+          error instanceof Error ? error.message : String(error);
+        this.logger.warn(
+          `Метка записана, но read-after-write проверка не выполнена для юнита ${updateUnit.id}: ${verificationError}`,
+        );
+      }
 
       return {
         projectSlug,
         componentSlug,
         languageCode,
         key,
+        requestedUnitId: unit.id.toString(),
+        updatedUnitId: updateUnit.id.toString(),
+        sourceUnitId,
+        labelsOwner: sourceUnitId ? 'source_unit' : 'requested_unit',
         explanation: finalExplanation,
         assignedLabel: label,
-        labels,
+        labels: finalLabels,
+        verified,
+        ...(verificationError ? { verificationError } : {}),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
