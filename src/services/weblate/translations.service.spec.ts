@@ -1,9 +1,15 @@
-import { unitsList, unitsPartialUpdate, type Unit } from '../../client';
+import {
+  unitsList,
+  unitsPartialUpdate,
+  unitsRetrieve,
+  type Unit,
+} from '../../client';
 import { WeblateTranslationsService } from './translations.service';
 
 jest.mock('../../client', () => ({
   unitsList: jest.fn(),
   unitsPartialUpdate: jest.fn(),
+  unitsRetrieve: jest.fn(),
 }));
 
 describe('WeblateTranslationsService', () => {
@@ -158,10 +164,7 @@ describe('WeblateTranslationsService', () => {
       client: expect.anything(),
       path: { id: '42' },
       body: {
-        labels: [
-          { id: 1, name: 'Existing', description: 'Already assigned' },
-          { id: 7, name: 'Needs review', color: 'orange' },
-        ],
+        labels: [1, 7],
         explanation: 'Review this translation',
       },
     });
@@ -214,8 +217,63 @@ describe('WeblateTranslationsService', () => {
     expect(result.labels).toEqual([label]);
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: { labels: [label], explanation: 'Already assigned' },
+        body: { labels: [7], explanation: 'Already assigned' },
       }),
     );
+  });
+
+  it('updates the source unit and preserves its existing explanation', async () => {
+    const retrieve = unitsRetrieve as jest.Mock;
+    const update = unitsPartialUpdate as jest.Mock;
+    const service = new WeblateTranslationsService({
+      getClient: jest.fn(() => ({})),
+    } as never);
+    const label = { id: 7, name: 'Needs review', color: 'orange' as const };
+    const sourceUnit = {
+      id: 24,
+      labels: [{ id: 1, name: 'Existing' }],
+      explanation: 'Existing source context',
+      source_unit: 'https://weblate.test/api/units/24/',
+    } as Unit;
+
+    jest.spyOn(service, 'getTranslationByKey').mockResolvedValue({
+      id: 42,
+      labels: [],
+      source_unit: 'https://weblate.test/api/units/24/',
+    } as Unit);
+    retrieve.mockResolvedValue({ data: sourceUnit });
+    update.mockResolvedValue({
+      data: {
+        labels: [1, 7],
+        explanation: 'Existing source context\n\nNew explanation',
+      },
+    });
+
+    await expect(
+      service.assignLabelToUnit(
+        'demo',
+        'web',
+        'ru',
+        'homepage.title',
+        label,
+        'New explanation',
+      ),
+    ).resolves.toMatchObject({
+      labels: [{ id: 1, name: 'Existing' }, label],
+      explanation: 'Existing source context\n\nNew explanation',
+    });
+
+    expect(retrieve).toHaveBeenCalledWith({
+      client: expect.anything(),
+      path: { id: '24' },
+    });
+    expect(update).toHaveBeenCalledWith({
+      client: expect.anything(),
+      path: { id: '24' },
+      body: {
+        labels: [1, 7],
+        explanation: 'Existing source context\n\nNew explanation',
+      },
+    });
   });
 });

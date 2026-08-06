@@ -10446,7 +10446,7 @@ export type PatchedUnitWrite = {
      * Additional comma-separated flags to influence Weblate behavior.
      */
     extra_flags?: string;
-    labels?: Array<UnitFlatLabels>;
+    labels?: Array<number>;
 };
 
 /**
@@ -14113,7 +14113,7 @@ export type UnitWrite = {
      * Additional comma-separated flags to influence Weblate behavior.
      */
     extra_flags?: string;
-    labels: Array<UnitFlatLabels>;
+    labels: Array<number>;
 };
 
 export type UnitsDestroyErrorResponse400 = {
