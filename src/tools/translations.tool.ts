@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Tool } from '@rekog/mcp-nest';
 import { z } from 'zod';
-import { WeblateApiService } from '../services';
+import {
+  WeblateApiService,
+  type WritableTranslationState,
+} from '../services';
 import { type Unit } from '../client';
 
 @Injectable()
@@ -205,6 +208,73 @@ export class WeblateTranslationsTool {
           {
             type: 'text',
             text: `Error writing translation for key "${key}": ${error.message}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  @Tool({
+    name: 'setTranslationState',
+    description:
+      'Изменить статус translation-unit без изменения текста. Для снятия статуса Needs Editing (state=10) используй state=20 (Translated). Допустимые состояния: 0 Untranslated, 10 Needs Editing, 20 Translated, 30 Approved.',
+    parameters: z.object({
+      projectSlug: z.string().describe('Идентификатор проекта Weblate'),
+      componentSlug: z.string().describe('Идентификатор компонента Weblate'),
+      languageCode: z.string().describe('Код языка перевода, например en'),
+      key: z.string().describe('Ключ translation-unit'),
+      state: z
+        .union([
+          z.literal(0),
+          z.literal(10),
+          z.literal(20),
+          z.literal(30),
+        ])
+        .describe(
+          'Новое состояние: 0 Untranslated, 10 Needs Editing, 20 Translated, 30 Approved',
+        ),
+    }),
+  })
+  async setTranslationState({
+    projectSlug,
+    componentSlug,
+    languageCode,
+    key,
+    state,
+  }: {
+    projectSlug: string;
+    componentSlug: string;
+    languageCode: string;
+    key: string;
+    state: WritableTranslationState;
+  }) {
+    try {
+      const updatedUnit = await this.weblateApiService.setTranslationState(
+        projectSlug,
+        componentSlug,
+        languageCode,
+        key,
+        state,
+      );
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: updatedUnit
+              ? `Статус перевода для ключа "${key}" изменён на ${state}\n\n${this.formatTranslationResult(updatedUnit)}`
+              : `Не удалось изменить статус перевода для ключа "${key}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      this.logger.error(`Failed to set state for translation key ${key}`, error);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Ошибка изменения статуса для ключа "${key}": ${error.message}`,
           },
         ],
         isError: true,

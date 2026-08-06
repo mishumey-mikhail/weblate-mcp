@@ -6,12 +6,15 @@ import {
   unitsPartialUpdate,
   unitsRetrieve,
   type PaginatedUnitList,
+  type StateEnum,
   type TranslationsUnitsRetrieveData,
   type Unit,
   type UnitFlatLabels,
   type UnitsListData,
 } from '../../client';
 import { SearchIn } from '../../types';
+
+export type WritableTranslationState = Exclude<StateEnum, 100>;
 
 export type AssignLabelToUnitResult = {
   projectSlug: string;
@@ -267,6 +270,47 @@ export class WeblateTranslationsService {
       this.logger.error(`Failed to write translation for key ${key}`, error);
       throw new Error(
         `Failed to write translation for key ${key}: ${error.message}`,
+      );
+    }
+  }
+
+  async setTranslationState(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    key: string,
+    state: WritableTranslationState,
+  ): Promise<Unit | null> {
+    try {
+      const unit = await this.getTranslationByKey(
+        projectSlug,
+        componentSlug,
+        languageCode,
+        key,
+      );
+
+      if (!unit || !unit.id) {
+        throw new Error(`Translation unit not found for key "${key}"`);
+      }
+
+      const client = this.weblateClientService.getClient();
+      const response = await unitsPartialUpdate({
+        client,
+        path: { id: unit.id.toString() },
+        body: { state },
+      });
+
+      if (response.error) {
+        throw new Error(`API error: ${JSON.stringify(response.error)}`);
+      }
+
+      return response.data
+        ? (response.data as unknown as Unit)
+        : null;
+    } catch (error) {
+      this.logger.error(`Failed to set state for translation key ${key}`, error);
+      throw new Error(
+        `Failed to set state for translation key ${key}: ${error.message}`,
       );
     }
   }

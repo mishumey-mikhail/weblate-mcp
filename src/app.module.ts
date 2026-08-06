@@ -48,6 +48,7 @@ Translation Management:
 - searchUnitsWithFailingChecks: Search read-only units with failing quality checks
 - getTranslationForKey: Get translation value for a specific key
 - writeTranslation: Write or update a translation value
+- setTranslationState: Change a translation status without changing its text
 - searchTranslationsByKey: Search for translations by key pattern
 - findTranslationsForKey: Find all translations for a specific key
 - listTranslationKeys: List all translation keys in a project

@@ -116,6 +116,45 @@ describe('WeblateTranslationsService', () => {
     );
   });
 
+  it('changes only the translation state', async () => {
+    const update = unitsPartialUpdate as jest.Mock;
+    const service = new WeblateTranslationsService({
+      getClient: jest.fn(() => ({})),
+    } as never);
+    jest.spyOn(service, 'getTranslationByKey').mockResolvedValue({
+      id: 42,
+      state: 10,
+      target: ['Existing translation'],
+    } as Unit);
+    update.mockResolvedValue({
+      data: {
+        id: 42,
+        state: 20,
+        target: ['Existing translation'],
+      },
+    });
+
+    await expect(
+      service.setTranslationState(
+        'demo',
+        'web',
+        'en',
+        'homepage.title',
+        20,
+      ),
+    ).resolves.toMatchObject({
+      id: 42,
+      state: 20,
+      target: ['Existing translation'],
+    });
+
+    expect(update).toHaveBeenCalledWith({
+      client: expect.anything(),
+      path: { id: '42' },
+      body: { state: 20 },
+    });
+  });
+
   it('assigns an existing label and preserves current labels', async () => {
     const update = unitsPartialUpdate as jest.Mock;
     const service = new WeblateTranslationsService({
