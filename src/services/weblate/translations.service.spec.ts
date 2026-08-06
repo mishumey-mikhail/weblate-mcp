@@ -188,7 +188,6 @@ describe('WeblateTranslationsService', () => {
           ...unit.labels,
           { id: 7, name: 'Needs review', color: 'orange' },
         ],
-        explanation: 'Review this translation',
       },
     });
     (unitsRetrieve as jest.Mock).mockResolvedValue({
@@ -198,29 +197,20 @@ describe('WeblateTranslationsService', () => {
           ...unit.labels,
           { id: 7, name: 'Needs review', color: 'orange' },
         ],
-        explanation: 'Review this translation',
       },
     });
 
     await expect(
-      service.assignLabelToUnit(
-        'demo',
-        'web',
-        'ru',
-        'homepage.title',
-        {
-          id: 7,
-          name: 'Needs review',
-          color: 'orange',
-        },
-        'Review this translation',
-      ),
+      service.assignLabelToUnit('demo', 'web', 'ru', 'homepage.title', {
+        id: 7,
+        name: 'Needs review',
+        color: 'orange',
+      }),
     ).resolves.toMatchObject({
       projectSlug: 'demo',
       componentSlug: 'web',
       languageCode: 'ru',
       key: 'homepage.title',
-      explanation: 'Review this translation',
       assignedLabel: { id: 7, name: 'Needs review', color: 'orange' },
       labels: [
         { id: 1, name: 'Existing', description: 'Already assigned' },
@@ -232,7 +222,6 @@ describe('WeblateTranslationsService', () => {
       path: { id: '42' },
       body: {
         labels: [1, 7],
-        explanation: 'Review this translation',
       },
     });
   });
@@ -245,17 +234,10 @@ describe('WeblateTranslationsService', () => {
     jest.spyOn(service, 'getTranslationByKey').mockResolvedValue(null);
 
     await expect(
-      service.assignLabelToUnit(
-        'demo',
-        'web',
-        'ru',
-        'missing.key',
-        {
-          id: 7,
-          name: 'Needs review',
-        },
-        'Missing unit test',
-      ),
+      service.assignLabelToUnit('demo', 'web', 'ru', 'missing.key', {
+        id: 7,
+        name: 'Needs review',
+      }),
     ).rejects.toThrow('Юнит перевода с ключом "missing.key" не найден');
     expect(update).not.toHaveBeenCalled();
   });
@@ -272,7 +254,7 @@ describe('WeblateTranslationsService', () => {
     } as Unit);
     update.mockResolvedValue({ data: { labels: [label] } });
     (unitsRetrieve as jest.Mock).mockResolvedValue({
-      data: { id: 42, labels: [label], explanation: 'Already assigned' },
+      data: { id: 42, labels: [label] },
     });
 
     const result = await service.assignLabelToUnit(
@@ -281,18 +263,17 @@ describe('WeblateTranslationsService', () => {
       'ru',
       'homepage.title',
       label,
-      'Already assigned',
     );
 
     expect(result.labels).toEqual([label]);
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: { labels: [7], explanation: 'Already assigned' },
+        body: { labels: [7] },
       }),
     );
   });
 
-  it('updates the source unit and preserves its existing explanation', async () => {
+  it('updates the source unit without changing its explanation', async () => {
     const retrieve = unitsRetrieve as jest.Mock;
     const update = unitsPartialUpdate as jest.Mock;
     const service = new WeblateTranslationsService({
@@ -315,28 +296,21 @@ describe('WeblateTranslationsService', () => {
       data: {
         ...sourceUnit,
         labels: [...sourceUnit.labels, label],
-        explanation: 'Existing source context\n\nNew explanation',
       },
     });
     update.mockResolvedValue({
       data: {
         labels: [1, 7],
-        explanation: 'Existing source context\n\nNew explanation',
       },
     });
 
     await expect(
-      service.assignLabelToUnit(
-        'demo',
-        'web',
-        'ru',
-        'homepage.title',
-        label,
-        'New explanation',
-      ),
+      service.assignLabelToUnit('demo', 'web', 'ru', 'homepage.title', label),
     ).resolves.toMatchObject({
       labels: [{ id: 1, name: 'Existing' }, label],
-      explanation: 'Existing source context\n\nNew explanation',
+      verified: true,
+      sourceUnitId: '24',
+      labelsOwner: 'source_unit',
     });
 
     expect(retrieve).toHaveBeenCalledWith({
@@ -348,7 +322,52 @@ describe('WeblateTranslationsService', () => {
       path: { id: '24' },
       body: {
         labels: [1, 7],
-        explanation: 'Existing source context\n\nNew explanation',
+      },
+    });
+  });
+
+  it('adds a comment to the target translation unit', async () => {
+    const request = jest.fn().mockResolvedValue({
+      data: {
+        id: 77,
+        comment: 'MQM: Needs review. Причина: найдено расхождение.',
+        scope: 'translation',
+      },
+    });
+    const service = new WeblateTranslationsService({
+      getClient: jest.fn(() => ({ request })),
+    } as never);
+    jest.spyOn(service, 'getTranslationByKey').mockResolvedValue({
+      id: 42,
+      source_unit: 'https://weblate.test/api/units/24/',
+    } as Unit);
+
+    await expect(
+      service.addUnitComment(
+        'demo',
+        'web',
+        'en',
+        'homepage.title',
+        'MQM: Needs review. Причина: найдено расхождение.',
+      ),
+    ).resolves.toEqual({
+      projectSlug: 'demo',
+      componentSlug: 'web',
+      languageCode: 'en',
+      key: 'homepage.title',
+      unitId: '42',
+      scope: 'translation',
+      comment: 'MQM: Needs review. Причина: найдено расхождение.',
+      commentId: 77,
+    });
+
+    expect(request).toHaveBeenCalledWith({
+      method: 'POST',
+      url: '/units/{id}/comments/',
+      path: { id: '42' },
+      body: {
+        comment: 'MQM: Needs review. Причина: найдено расхождение.',
+        scope: 'translation',
       },
     });
   });

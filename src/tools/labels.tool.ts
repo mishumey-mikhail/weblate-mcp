@@ -67,19 +67,13 @@ export class WeblateLabelsTool {
   @Tool({
     name: 'assignLabelToUnit',
     description:
-      'Изменяет данные: назначает существующую метку и сохраняет короткое explanation в примечании юнита перевода',
+      'Изменяет данные: назначает существующую метку юниту. Для комментария используй отдельный инструмент addUnitComment',
     parameters: z.object({
       projectSlug: z.string().describe('Slug проекта'),
       componentSlug: z.string().describe('Slug компонента'),
       languageCode: z.string().describe('Код языка'),
       key: z.string().describe('Ключ юнита перевода'),
       labelId: z.number().int().positive().describe('ID существующей метки'),
-      explanation: z
-        .string()
-        .trim()
-        .min(1)
-        .max(500)
-        .describe('Короткое примечание к юниту'),
     }),
   })
   async assignLabelToUnit({
@@ -88,28 +82,20 @@ export class WeblateLabelsTool {
     languageCode,
     key,
     labelId,
-    explanation,
   }: {
     projectSlug: string;
     componentSlug: string;
     languageCode: string;
     key: string;
     labelId: number;
-    explanation: string;
   }): Promise<CallToolResult> {
     try {
-      const selectedExplanation = explanation?.trim();
-      if (!selectedExplanation) {
-        throw new Error('Укажите explanation');
-      }
-
       const result = await this.weblateApiService.assignLabelToUnit(
         projectSlug,
         componentSlug,
         languageCode,
         key,
         labelId,
-        selectedExplanation,
       );
 
       return {

@@ -108,7 +108,7 @@ List the labels available in a Weblate project. This is a read-only operation.
 
 ### `assignLabelToUnit`
 
-**Write action:** assign an existing project label and save an explanation on a translation unit. This changes Weblate data and should be enabled explicitly in `prompt.config`; the tool does not create labels.
+**Write action:** assign an existing project label to the source unit. This changes Weblate data and should be enabled explicitly in `prompt.config`; the tool does not create labels or comments.
 
 **Parameters:**
 - `projectSlug` (string, required): Project slug identifier
@@ -116,7 +116,6 @@ List the labels available in a Weblate project. This is a read-only operation.
 - `languageCode` (string, required): Translation language code
 - `key` (string, required): Translation unit key/context
 - `labelId` (number, required): ID of an existing label belonging to the project
-- `explanation` (string, required): Short note saved to the unit together with the labels update
 
 **Returns:** JSON text with the unit scope, assigned label, and final label list.
 
@@ -129,8 +128,7 @@ List the labels available in a Weblate project. This is a read-only operation.
     "componentSlug": "web",
     "languageCode": "ru",
     "key": "homepage.title",
-    "labelId": 7,
-    "explanation": "Review this translation"
+    "labelId": 7
   }
 }
 ```
@@ -142,7 +140,9 @@ List the labels available in a Weblate project. This is a read-only operation.
   "componentSlug": "web",
   "languageCode": "ru",
   "key": "homepage.title",
-  "explanation": "Review this translation",
+  "updatedUnitId": "24",
+  "labelsOwner": "source_unit",
+  "verified": true,
   "assignedLabel": {
     "id": 7,
     "name": "Needs review"
@@ -153,6 +153,31 @@ List the labels available in a Weblate project. This is a read-only operation.
       "name": "Needs review"
     }
   ]
+}
+```
+
+### `addUnitComment`
+
+**Write action:** add a real comment to the target translation unit. Use this after `assignLabelToUnit` for a short MQM reason; it does not write Weblate's Additional explanation field. This changes Weblate data and should be enabled explicitly in `prompt.config`.
+
+**Parameters:**
+- `projectSlug` (string, required): Project slug identifier
+- `componentSlug` (string, required): Component slug identifier
+- `languageCode` (string, required): Translation language code
+- `key` (string, required): Translation unit key/context
+- `comment` (string, required): Short comment for the target translation unit
+
+**Example:**
+```json
+{
+  "name": "addUnitComment",
+  "arguments": {
+    "projectSlug": "myproject",
+    "componentSlug": "web",
+    "languageCode": "ru",
+    "key": "homepage.title",
+    "comment": "MQM: Needs review. Причина: target искажает смысл source."
+  }
 }
 ```
 

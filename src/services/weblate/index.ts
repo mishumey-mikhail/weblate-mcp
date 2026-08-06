@@ -4,6 +4,7 @@ export { WeblateComponentsService } from './components.service';
 export { WeblateLanguagesService } from './languages.service';
 export {
   WeblateTranslationsService,
+  type AddUnitCommentResult,
   type AssignLabelToUnitResult,
   type SetTranslationStateResult,
   type WritableTranslationState,

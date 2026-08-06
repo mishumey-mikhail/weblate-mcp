@@ -12,7 +12,7 @@ import {
   type UnitFlatLabels,
   type UnitsListData,
 } from '../../client';
-import { SearchIn } from '../../types';
+import { type SearchIn, type WeblateComment } from '../../types';
 
 export type WritableTranslationState = Exclude<StateEnum, 100>;
 
@@ -35,11 +35,21 @@ export type AssignLabelToUnitResult = {
   updatedUnitId: string;
   sourceUnitId: string | null;
   labelsOwner: 'requested_unit' | 'source_unit';
-  explanation: string;
   assignedLabel: UnitFlatLabels;
   labels: UnitFlatLabels[];
   verified: boolean;
   verificationError?: string;
+};
+
+export type AddUnitCommentResult = {
+  projectSlug: string;
+  componentSlug: string;
+  languageCode: string;
+  key: string;
+  unitId: string;
+  scope: 'translation';
+  comment: string;
+  commentId: number | null;
 };
 
 function mergeUnitLabels(
@@ -61,20 +71,6 @@ function extractUnitId(unitUrl: string | undefined): string | null {
 
   const match = unitUrl.match(/\/units\/(\d+)\/?$/);
   return match?.[1] ?? null;
-}
-
-function mergeExplanation(
-  currentExplanation: string | undefined,
-  explanation: string,
-): string {
-  const current = currentExplanation?.trim() ?? '';
-  const next = explanation.trim();
-
-  if (!current || current.includes(next)) {
-    return current || next;
-  }
-
-  return `${current}\n\n${next}`;
 }
 
 function searchValue(value: string): string {
@@ -388,7 +384,6 @@ export class WeblateTranslationsService {
     languageCode: string,
     key: string,
     label: UnitFlatLabels,
-    explanation: string,
   ): Promise<AssignLabelToUnitResult> {
     try {
       const unit = await this.getTranslationByKey(
@@ -424,16 +419,11 @@ export class WeblateTranslationsService {
       }
 
       const labels = mergeUnitLabels(updateUnit.labels ?? [], label);
-      const explanationToSave = mergeExplanation(
-        updateUnit.explanation,
-        explanation,
-      );
       const response = await unitsPartialUpdate({
         client,
         path: { id: updateUnit.id.toString() },
         body: {
           labels: labels.map(({ id }) => id),
-          explanation: explanationToSave,
         },
       });
 
@@ -443,16 +433,7 @@ export class WeblateTranslationsService {
         );
       }
 
-      const responseData = response.data as {
-        labels?: unknown;
-        explanation?: unknown;
-      } | null;
-      const responseExplanation =
-        typeof responseData?.explanation === 'string'
-          ? responseData.explanation
-          : explanationToSave;
       let finalLabels = labels;
-      let finalExplanation = responseExplanation;
       let verified = false;
       let verificationError: string | undefined;
 
@@ -470,7 +451,6 @@ export class WeblateTranslationsService {
 
         const verifiedUnit = verificationResponse.data as Unit;
         finalLabels = verifiedUnit.labels ?? [];
-        finalExplanation = verifiedUnit.explanation ?? responseExplanation;
         verified = finalLabels.some(({ id }) => id === label.id);
       } catch (error) {
         verificationError =
@@ -489,7 +469,6 @@ export class WeblateTranslationsService {
         updatedUnitId: updateUnit.id.toString(),
         sourceUnitId,
         labelsOwner: sourceUnitId ? 'source_unit' : 'requested_unit',
-        explanation: finalExplanation,
         assignedLabel: label,
         labels: finalLabels,
         verified,
@@ -503,6 +482,72 @@ export class WeblateTranslationsService {
       );
       throw new Error(
         `Не удалось назначить метку юниту с ключом "${key}": ${message}`,
+      );
+    }
+  }
+
+  async addUnitComment(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    key: string,
+    comment: string,
+  ): Promise<AddUnitCommentResult> {
+    try {
+      const unit = await this.getTranslationByKey(
+        projectSlug,
+        componentSlug,
+        languageCode,
+        key,
+      );
+
+      if (!unit || !unit.id) {
+        throw new Error(
+          `Юнит перевода с ключом "${key}" не найден в ${projectSlug}/${componentSlug}/${languageCode}`,
+        );
+      }
+
+      const selectedComment = comment.trim();
+      if (!selectedComment) {
+        throw new Error('Комментарий не может быть пустым');
+      }
+
+      const client = this.weblateClientService.getClient();
+      const response = await client.request({
+        method: 'POST',
+        url: '/units/{id}/comments/',
+        path: { id: unit.id.toString() },
+        body: {
+          comment: selectedComment,
+          scope: 'translation',
+        },
+      });
+
+      if (response.error) {
+        throw new Error(
+          `Ошибка API Weblate: ${JSON.stringify(response.error)}`,
+        );
+      }
+
+      const responseData = response.data as Partial<WeblateComment> | null;
+      return {
+        projectSlug,
+        componentSlug,
+        languageCode,
+        key,
+        unitId: unit.id.toString(),
+        scope: 'translation',
+        comment: responseData?.comment ?? selectedComment,
+        commentId: responseData?.id ?? null,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Не удалось добавить комментарий к юниту с ключом "${key}"`,
+        error,
+      );
+      throw new Error(
+        `Не удалось добавить комментарий к юниту с ключом "${key}": ${message}`,
       );
     }
   }

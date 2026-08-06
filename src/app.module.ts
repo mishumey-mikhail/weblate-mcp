@@ -23,6 +23,7 @@ import {
   WeblateMemoryTool,
   WeblateReadonlyTool,
   WeblateLabelsTool,
+  WeblateCommentsTool,
 } from './tools';
 import { randomUUID } from 'crypto';
 
@@ -49,6 +50,7 @@ Translation Management:
 - getTranslationForKey: Get translation value for a specific key
 - writeTranslation: Write or update a translation value
 - setTranslationState: Change a translation status without changing its text
+- addUnitComment: Add a comment to a target translation unit
 - searchTranslationsByKey: Search for translations by key pattern
 - findTranslationsForKey: Find all translations for a specific key
 - listTranslationKeys: List all translation keys in a project
@@ -101,6 +103,7 @@ Translation Statistics Dashboard:
     WeblateReadonlyService,
     WeblateProjectsTool,
     WeblateLabelsTool,
+    WeblateCommentsTool,
     WeblateComponentsTool,
     WeblateLanguagesTool,
     WeblateTranslationsTool,

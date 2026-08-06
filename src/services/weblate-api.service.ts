@@ -7,6 +7,7 @@ import {
   WeblateChangesService,
   WeblateMemoryService,
   WeblateReadonlyService,
+  type AddUnitCommentResult,
   type AssignLabelToUnitResult,
   type ProjectLabel,
   type SetTranslationStateResult,
@@ -63,7 +64,6 @@ export class WeblateApiService {
     languageCode: string,
     key: string,
     labelId: number,
-    explanation: string,
   ): Promise<AssignLabelToUnitResult> {
     const labels = await this.projectsService.listProjectLabels(projectSlug);
     const label = labels.find(({ id }) => id === labelId);
@@ -80,7 +80,22 @@ export class WeblateApiService {
       languageCode,
       key,
       label,
-      explanation,
+    );
+  }
+
+  async addUnitComment(
+    projectSlug: string,
+    componentSlug: string,
+    languageCode: string,
+    key: string,
+    comment: string,
+  ): Promise<AddUnitCommentResult> {
+    return this.translationsService.addUnitComment(
+      projectSlug,
+      componentSlug,
+      languageCode,
+      key,
+      comment,
     );
   }
 

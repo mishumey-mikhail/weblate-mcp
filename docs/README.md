@@ -70,7 +70,8 @@ The MCP server provides comprehensive tools for interacting with Weblate:
 - Comprehensive project information with URLs and metadata
 
 Optional write tool:
-- `assignLabelToUnit` - **Changes data** by assigning an existing project label and saving an explanation on a translation unit; enable explicitly in `prompt.config`
+- `assignLabelToUnit` - **Changes data** by assigning an existing project label to the source unit; enable explicitly in `prompt.config`
+- `addUnitComment` - **Changes data** by adding a real comment to the target translation unit; use after `assignLabelToUnit` for the MQM reason
 
 ### Component Management
 - `listComponents` - List components in a specific project
