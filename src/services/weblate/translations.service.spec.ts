@@ -123,6 +123,7 @@ describe('WeblateTranslationsService', () => {
     } as never);
     jest.spyOn(service, 'getTranslationByKey').mockResolvedValue({
       id: 42,
+      source: ['Исходный текст'],
       state: 10,
       target: ['Existing translation'],
     } as Unit);
@@ -133,19 +134,28 @@ describe('WeblateTranslationsService', () => {
         target: ['Existing translation'],
       },
     });
+    (unitsRetrieve as jest.Mock).mockResolvedValue({
+      data: {
+        id: 42,
+        source: ['Исходный текст'],
+        target: ['Existing translation'],
+        state: 20,
+      },
+    });
 
     await expect(
-      service.setTranslationState(
-        'demo',
-        'web',
-        'en',
-        'homepage.title',
-        20,
-      ),
+      service.setTranslationState('demo', 'web', 'en', 'homepage.title', 20),
     ).resolves.toMatchObject({
-      id: 42,
-      state: 20,
-      target: ['Existing translation'],
+      unit: {
+        id: 42,
+        state: 20,
+        target: ['Existing translation'],
+      },
+      previousState: 10,
+      requestedState: 20,
+      verifiedState: 20,
+      verified: true,
+      textUnchanged: true,
     });
 
     expect(update).toHaveBeenCalledWith({
@@ -155,6 +165,10 @@ describe('WeblateTranslationsService', () => {
         state: 20,
         target: ['Existing translation'],
       },
+    });
+    expect(unitsRetrieve).toHaveBeenCalledWith({
+      client: expect.anything(),
+      path: { id: '42' },
     });
   });
 

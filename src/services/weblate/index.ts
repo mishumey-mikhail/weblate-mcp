@@ -5,6 +5,7 @@ export { WeblateLanguagesService } from './languages.service';
 export {
   WeblateTranslationsService,
   type AssignLabelToUnitResult,
+  type SetTranslationStateResult,
   type WritableTranslationState,
 } from './translations.service';
 export { WeblateChangesService } from './changes.service';

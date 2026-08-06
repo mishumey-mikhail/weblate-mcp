@@ -16,6 +16,16 @@ import { SearchIn } from '../../types';
 
 export type WritableTranslationState = Exclude<StateEnum, 100>;
 
+export type SetTranslationStateResult = {
+  unit: Unit;
+  previousState: StateEnum | undefined;
+  requestedState: WritableTranslationState;
+  verifiedState: StateEnum | undefined;
+  verified: boolean;
+  textUnchanged: boolean;
+  verificationError?: string;
+};
+
 export type AssignLabelToUnitResult = {
   projectSlug: string;
   componentSlug: string;
@@ -280,7 +290,7 @@ export class WeblateTranslationsService {
     languageCode: string,
     key: string,
     state: WritableTranslationState,
-  ): Promise<Unit | null> {
+  ): Promise<SetTranslationStateResult> {
     try {
       const unit = await this.getTranslationByKey(
         projectSlug,
@@ -307,11 +317,59 @@ export class WeblateTranslationsService {
         throw new Error(`API error: ${JSON.stringify(response.error)}`);
       }
 
-      return response.data
-        ? (response.data as unknown as Unit)
-        : null;
+      const responseUnit = response.data as unknown as Partial<Unit> | null;
+      let verifiedUnit: Unit | null = null;
+      let verificationError: string | undefined;
+
+      try {
+        const verificationResponse = await unitsRetrieve({
+          client,
+          path: { id: unit.id.toString() },
+        });
+
+        if (verificationResponse.error || !verificationResponse.data) {
+          throw new Error(
+            `API error: ${JSON.stringify(verificationResponse.error)}`,
+          );
+        }
+
+        verifiedUnit = verificationResponse.data as Unit;
+      } catch (error) {
+        verificationError =
+          error instanceof Error ? error.message : String(error);
+        this.logger.warn(
+          `State update succeeded but read-after-write verification failed for unit ${unit.id}: ${verificationError}`,
+        );
+      }
+
+      const fallbackUnit: Unit = {
+        ...unit,
+        state: responseUnit?.state ?? state,
+        target: unit.target ?? [],
+      };
+      const finalUnit = verifiedUnit ?? fallbackUnit;
+      const textUnchanged =
+        JSON.stringify(finalUnit.source ?? []) ===
+          JSON.stringify(unit.source ?? []) &&
+        JSON.stringify(finalUnit.target ?? []) ===
+          JSON.stringify(unit.target ?? []);
+      const verified =
+        verifiedUnit !== null && verifiedUnit.state === state && textUnchanged;
+
+      return {
+        unit: finalUnit,
+        previousState: unit.state,
+        requestedState: state,
+        verifiedState: finalUnit.state,
+        verified,
+        textUnchanged,
+        ...(verificationError ? { verificationError } : {}),
+      };
     } catch (error) {
-      this.logger.error(`Failed to set state for translation key ${key}`, error);
+      this.logger.error(
+        `Failed to set state for translation key ${key}`,
+        error,
+      );
       throw new Error(
         `Failed to set state for translation key ${key}: ${error.message}`,
       );

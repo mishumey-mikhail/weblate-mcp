@@ -9,6 +9,7 @@ import {
   WeblateReadonlyService,
   type AssignLabelToUnitResult,
   type ProjectLabel,
+  type SetTranslationStateResult,
   type WritableTranslationState,
 } from './weblate';
 import {
@@ -166,7 +167,7 @@ export class WeblateApiService {
     languageCode: string,
     key: string,
     state: WritableTranslationState,
-  ): Promise<Unit | null> {
+  ): Promise<SetTranslationStateResult> {
     return this.translationsService.setTranslationState(
       projectSlug,
       componentSlug,

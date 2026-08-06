@@ -4,13 +4,20 @@ describe('WeblateTranslationsTool', () => {
   it('changes a translation state without changing its text', async () => {
     const service = {
       setTranslationState: jest.fn().mockResolvedValue({
-        context: 'homepage.title',
-        source: ['Заголовок'],
-        target: ['Title'],
-        state: 20,
-        approved: false,
-        translated: true,
-        id: 42,
+        unit: {
+          context: 'homepage.title',
+          source: ['Заголовок'],
+          target: ['Title'],
+          state: 20,
+          approved: false,
+          translated: true,
+          id: 42,
+        },
+        previousState: 10,
+        requestedState: 20,
+        verifiedState: 20,
+        verified: true,
+        textUnchanged: true,
       }),
     };
     const tool = new WeblateTranslationsTool(service as never);
@@ -37,6 +44,8 @@ describe('WeblateTranslationsTool', () => {
     }
     expect(content.text).toContain('изменён на 20');
     expect(content.text).toContain('**Target:** Title');
+    expect(content.text).toContain('Проверено чтением после записи');
+    expect(content.text).toContain('**State:** 20');
   });
 
   it('returns an MCP error when state update fails', async () => {
